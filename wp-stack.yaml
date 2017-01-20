@@ -1,11 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
-  ECSCluster:
-    Description: "Name of the ECS cluster to deploy this service to"
+  AppName:
+    Description: "Name of the application"
     Type: String
-  SSLCertificateArn:
-    Description: "ARN of the SSL certificate to use from ACM"
-    Type: String
+    AllowedPattern: "[a-z0-9-]+"
+    ConstraintDescription: "must only contain lowercase letters, numbers and hyphens"
   DockerImage:
     Description: "Docker image to use (including tag)"
     Type: String
@@ -47,16 +46,61 @@ Parameters:
     Description: "A comma-separated list of IP addresses that should be allowed to access the WordPress login page."
     Type: String
   SiteWhitelistIps:
-    Description: "A comma-separated list of IP addresses to whitelist the entire website."
+    Description: "(optional) A comma-separated list of IP addresses to whitelist the entire website."
     Type: String
     Default: ""
+  Environment:
+    Description: "The environment this application should run in."
+    Type: String
+    Default: development
+    AllowedValues:
+      - development
+      - staging
+      - production
+  CustomDomain:
+    Description: "(optional) Custom domain name for the app. This will affect SERVER_NAME, WP_HOME and WP_SITEURL."
+    Type: String
+    Default: ""
+Mappings:
+  EnvironmentMap:
+    development:
+      HostedZone: dev.wp.dsd.io.
+      Hostname: dev.wp.dsd.io
+      AWSLogGroup: wp-dev
+      ECSCluster: wp-dev
+      SSLCertificateArn:  arn:aws:acm:eu-west-2:613903586696:certificate/006ac123-c8b7-4f47-ac49-2dcbc6c6bd45
+      ELBSubnet1: subnet-0378637b
+      ELBSubnet2: subnet-c1fbc78b
+      ELBSecurityGroup: sg-d86b93b1
+      TargetGroupVPC: vpc-f1857398
+    staging:
+      HostedZone: staging.wp.dsd.io.
+      Hostname: staging.wp.dsd.io
+      AWSLogGroup: wp-staging
+      ECSCluster: wp-staging
+      SSLCertificateArn:  arn:aws:acm:eu-west-2:613903586696:certificate/9b35290e-dd85-4a10-b084-956c187ca6cd
+      ELBSubnet1: subnet-5d7f6425
+      ELBSubnet2: subnet-7ff4c835
+      ELBSecurityGroup: sg-986b93f1
+      TargetGroupVPC: vpc-38827451
+    production:
+      HostedZone: prod.wp.dsd.io.
+      Hostname: prod.wp.dsd.io
+      AWSLogGroup: wp-production
+      ECSCluster: wp-production
+      SSLCertificateArn:  arn:aws:acm:eu-west-2:613903586696:certificate/3a60a3f5-a250-42d3-8af0-ae24bfee13eb
+      ELBSubnet1: subnet-297f6451
+      ELBSubnet2: subnet-29f4c863
+      ELBSecurityGroup: sg-d66b93bf
+      TargetGroupVPC: vpc-e282748b
 Outputs:
   DNSName:
     Description: "DNS name of the service. Use this directly or as a CNAME."
     Value: !Ref DNSRecord
 Conditions:
-  SmtpUseSsl: !Equals [!Ref SmtpSecurity, SSL]
-  SmtpUseStarttls: !Equals [!Ref SmtpSecurity, STARTTLS]
+  SmtpUseSsl: !Equals [ !Ref SmtpSecurity, "SSL" ]
+  SmtpUseStarttls: !Equals [ !Ref SmtpSecurity, "STARTTLS" ]
+  UseCustomDomain: !Not [ !Equals [ !Ref CustomDomain, ""] ]
 Resources:
   ##
   # ECS task & service
@@ -77,9 +121,9 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: ECS-wordpress
-              awslogs-region: eu-west-1
-              awslogs-stream-prefix: !Ref AWS::StackName
+              awslogs-group: !FindInMap [ EnvironmentMap, !Ref Environment, AWSLogGroup ]
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: !Ref AppName
           Environment:
             - Name: AWS_ACCESS_KEY_ID
               Value: !Ref StorageUserAccessKey
@@ -108,7 +152,7 @@ Resources:
             - Name: S3_UPLOADS_BASE_URL
               Value: !Join [ '', [ 'https://s3-', !Ref 'AWS::Region', '.amazonaws.com/', !Ref Storage, '/uploads' ] ]
             - Name: SERVER_NAME
-              Value: !Join [ '', [ !Ref 'AWS::StackName', '.wp.dsd.io' ] ]
+              Value: !If [ UseCustomDomain, !Ref CustomDomain, !Join [ '', [ !Ref AppName, '.', !FindInMap [ EnvironmentMap, !Ref Environment, Hostname ] ] ] ]
             - Name: SMTP_HOST
               Value: !Ref SmtpHost
             - Name: SMTP_USER
@@ -120,9 +164,11 @@ Resources:
             - Name: SMTP_USE_STARTTLS
               Value: !If [SmtpUseStarttls, 'true', !Ref 'AWS::NoValue']
             - Name: WP_HOME
-              Value: !Join [ '', [ 'https://', !Ref 'AWS::StackName', '.wp.dsd.io' ] ]
+              Value: !Join [ '', [ 'https://', !If [ UseCustomDomain, !Ref CustomDomain, !Join [ '', [ !Ref AppName, '.', !FindInMap [ EnvironmentMap, !Ref Environment, Hostname ] ] ] ] ] ]
             - Name: WP_SITEURL
-              Value: !Join [ '', [ 'https://', !Ref 'AWS::StackName', '.wp.dsd.io', '/wp' ] ]
+              Value: !Join [ '', [ 'https://', !If [ UseCustomDomain, !Ref CustomDomain, !Join [ '', [ !Ref AppName, '.', !FindInMap [ EnvironmentMap, !Ref Environment, Hostname ] ] ] ], '/wp' ] ]
+            - Name: WP_ENV
+              Value: !Ref Environment
       Family: !Ref AWS::StackName
   WebService:
     Type: AWS::ECS::Service
@@ -131,7 +177,7 @@ Resources:
       - WebTaskDefinition
       - HttpListener
     Properties:
-      Cluster: !Ref ECSCluster
+      Cluster: !FindInMap [ EnvironmentMap, !Ref Environment, ECSCluster ]
       DesiredCount: '2'
       LoadBalancers:
         - ContainerName: web
@@ -188,10 +234,10 @@ Resources:
     Properties:
       Scheme: 'internet-facing'
       SecurityGroups:
-        - sg-47607b20
+        - !FindInMap [ EnvironmentMap, !Ref Environment, ELBSecurityGroup ]
       Subnets:
-        - subnet-02e68474
-        - subnet-5060d008
+        - !FindInMap [ EnvironmentMap, !Ref Environment, ELBSubnet1 ]
+        - !FindInMap [ EnvironmentMap, !Ref Environment, ELBSubnet2 ]
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     DependsOn:
@@ -199,7 +245,8 @@ Resources:
     Properties:
       Protocol: HTTP
       Port: '80'
-      VpcId: vpc-849e0fe0
+      VpcId: !FindInMap [ EnvironmentMap, !Ref Environment, TargetGroupVPC ]
+      HealthCheckPath: "/wp/readme.html"
   HttpListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn:
@@ -220,7 +267,7 @@ Resources:
       Port: '443'
       Protocol: HTTPS
       Certificates:
-        - CertificateArn: !Ref SSLCertificateArn
+        - CertificateArn: !FindInMap [ EnvironmentMap, !Ref Environment, SSLCertificateArn ]
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroup
@@ -232,8 +279,8 @@ Resources:
     DependsOn:
       - LoadBalancer
     Properties:
-      HostedZoneName: "wp.dsd.io."
-      Name: !Join [ '', [ !Ref 'AWS::StackName', '.wp.dsd.io.' ] ]
+      HostedZoneName: !FindInMap [ EnvironmentMap, !Ref Environment, HostedZone ]
+      Name: !Join [ '', [ !Ref AppName, '.', !FindInMap [ EnvironmentMap, !Ref Environment, Hostname ], '.' ] ]
       Type: "A"
       AliasTarget:
         DNSName: !GetAtt LoadBalancer.DNSName
