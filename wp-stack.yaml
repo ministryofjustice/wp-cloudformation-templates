@@ -196,6 +196,14 @@ Resources:
   ##
   Storage:
     Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: "Delete old backup versions after 30 days"
+            NoncurrentVersionExpirationInDays: 30
+            Status: Enabled
   StorageTopic:
     Type: AWS::SNS::Topic
   StorageUser:
