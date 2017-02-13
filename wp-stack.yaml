@@ -62,6 +62,10 @@ Parameters:
     Description: "(optional) Custom domain name for the app. This will affect SERVER_NAME, WP_HOME and WP_SITEURL."
     Type: String
     Default: ""
+  CustomSSLCertificateArn:
+    Description: "(optional) SSL Certificate ARN to be used with the custom domain name."
+    Type: String
+    Default: ""
 Mappings:
   EnvironmentMap:
     development:
@@ -102,6 +106,7 @@ Conditions:
   SmtpUseSsl: !Equals [ !Ref SmtpSecurity, "SSL" ]
   SmtpUseStarttls: !Equals [ !Ref SmtpSecurity, "STARTTLS" ]
   UseCustomDomain: !Not [ !Equals [ !Ref CustomDomain, ""] ]
+  UseCustomSSLCertificateArn: !Not [ !Equals [ !Ref CustomSSLCertificateArn, ""] ]
 Resources:
   ##
   # ECS task & service
@@ -268,7 +273,7 @@ Resources:
       Port: '443'
       Protocol: HTTPS
       Certificates:
-        - CertificateArn: !FindInMap [ EnvironmentMap, !Ref Environment, SSLCertificateArn ]
+        - CertificateArn: !If [ UseCustomSSLCertificateArn, !Ref CustomSSLCertificateArn, !FindInMap [ EnvironmentMap, !Ref Environment, SSLCertificateArn ] ]
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroup
