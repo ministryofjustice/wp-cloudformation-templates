@@ -66,6 +66,30 @@ Parameters:
     Description: "(optional) SSL Certificate ARN to be used with the custom domain name."
     Type: String
     Default: ""
+  WpAuthKey:
+    Description: "AUTH_KEY for WordPress"
+    Type: String
+  WpSecureAuthKey:
+    Description: "SECURE_AUTH_KEY for WordPress"
+    Type: String
+  WpLoggedInKey:
+    Description: "LOGGED_IN_KEY for WordPress"
+    Type: String
+  WpNonceKey:
+    Description: "NONCE_KEY for WordPress"
+    Type: String
+  WpAuthSalt:
+    Description: "AUTH_SALT for WordPress"
+    Type: String
+  WpSecureAuthSalt:
+    Description: "SECURE_AUTH_SALT for WordPress"
+    Type: String
+  WpLoggedInSalt:
+    Description: "LOGGED_IN_SALT for WordPress"
+    Type: String
+  WpNonceSalt:
+    Description: "NONCE_SALT for WordPress"
+    Type: String
 Mappings:
   EnvironmentMap:
     development:
@@ -175,6 +199,22 @@ Resources:
               Value: !Join [ '', [ 'https://', !If [ UseCustomDomain, !Ref CustomDomain, !Join [ '', [ !Ref AppName, '.', !FindInMap [ EnvironmentMap, !Ref Environment, Hostname ] ] ] ], '/wp' ] ]
             - Name: WP_ENV
               Value: !Ref Environment
+            - Name: AUTH_KEY
+              Value: !Ref WpAuthKey
+            - Name: SECURE_AUTH_KEY
+              Value: !Ref WpSecureAuthKey
+            - Name: LOGGED_IN_KEY
+              Value: !Ref WpLoggedInKey
+            - Name: NONCE_KEY
+              Value: !Ref WpNonceKey
+            - Name: AUTH_SALT
+              Value: !Ref WpAuthSalt
+            - Name: SECURE_AUTH_SALT
+              Value: !Ref WpSecureAuthSalt
+            - Name: LOGGED_IN_SALT
+              Value: !Ref WpLoggedInSalt
+            - Name: NONCE_SALT
+              Value: !Ref WpNonceSalt
       Family: !Ref AWS::StackName
   WebService:
     Type: AWS::ECS::Service
