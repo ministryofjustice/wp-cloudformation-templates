@@ -69,27 +69,35 @@ Parameters:
   WpAuthKey:
     Description: "AUTH_KEY for WordPress"
     Type: String
+    NoEcho: 'true'
   WpSecureAuthKey:
     Description: "SECURE_AUTH_KEY for WordPress"
     Type: String
+    NoEcho: 'true'
   WpLoggedInKey:
     Description: "LOGGED_IN_KEY for WordPress"
     Type: String
+    NoEcho: 'true'
   WpNonceKey:
     Description: "NONCE_KEY for WordPress"
     Type: String
+    NoEcho: 'true'
   WpAuthSalt:
     Description: "AUTH_SALT for WordPress"
     Type: String
+    NoEcho: 'true'
   WpSecureAuthSalt:
     Description: "SECURE_AUTH_SALT for WordPress"
     Type: String
+    NoEcho: 'true'
   WpLoggedInSalt:
     Description: "LOGGED_IN_SALT for WordPress"
     Type: String
+    NoEcho: 'true'
   WpNonceSalt:
     Description: "NONCE_SALT for WordPress"
     Type: String
+    NoEcho: 'true'
 Mappings:
   EnvironmentMap:
     development:
