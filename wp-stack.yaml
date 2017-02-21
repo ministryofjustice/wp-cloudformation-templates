@@ -137,8 +137,10 @@ Outputs:
 Conditions:
   SmtpUseSsl: !Equals [ !Ref SmtpSecurity, "SSL" ]
   SmtpUseStarttls: !Equals [ !Ref SmtpSecurity, "STARTTLS" ]
-  UseCustomDomain: !Not [ !Equals [ !Ref CustomDomain, ""] ]
-  UseCustomSSLCertificateArn: !Not [ !Equals [ !Ref CustomSSLCertificateArn, ""] ]
+  UseCustomDomain: !Not [ !Equals [ !Ref CustomDomain, "" ] ]
+  UseCustomSSLCertificateArn: !Not [ !Equals [ !Ref CustomSSLCertificateArn, "" ] ]
+  HasSiteIpWhitelist: !Not [ !Equals [ !Ref SiteWhitelistIps, "" ] ]
+  DoesNotHaveSiteIpWhitelist: !Equals [ !Ref SiteWhitelistIps, "" ]
 Resources:
   ##
   # ECS task & service
@@ -252,6 +254,33 @@ Resources:
           - Id: "Delete old backup versions after 30 days"
             NoncurrentVersionExpirationInDays: 30
             Status: Enabled
+  StorageBucketPolicyWhitelisted:
+    Type: AWS::S3::BucketPolicy
+    Condition: HasSiteIpWhitelist
+    Properties:
+      Bucket: !Ref Storage
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: "s3:GetObject"
+            Effect: "Allow"
+            Resource: !Join [ '', [ 'arn:aws:s3:::', !Ref Storage, '/uploads/*' ] ]
+            Principal: "*"
+            Condition:
+              IpAddress:
+                aws:SourceIp: !Split [ "," , !Ref SiteWhitelistIps ]
+  StorageBucketPolicyPublic:
+    Type: AWS::S3::BucketPolicy
+    Condition: DoesNotHaveSiteIpWhitelist
+    Properties:
+      Bucket: !Ref Storage
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: "s3:GetObject"
+            Effect: "Allow"
+            Resource: !Join [ '', [ 'arn:aws:s3:::', !Ref Storage, '/uploads/*' ] ]
+            Principal: "*"
   StorageTopic:
     Type: AWS::SNS::Topic
   StorageUser:
