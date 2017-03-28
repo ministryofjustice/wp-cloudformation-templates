@@ -1,0 +1,191 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  AppName:
+    Description: "Name of the application"
+    Type: String
+    AllowedPattern: "[a-z0-9-]+"
+    ConstraintDescription: "must only contain lowercase letters, numbers and hyphens"
+  RepoName:
+    Description: "Name of the GitHub repository (without the owner)"
+    Type: String
+    AllowedPattern: "[a-z0-9-/]+"
+    ConstraintDescription: "must only contain lowercase letters, numbers, hyphens and slashes"
+  GitHubToken:
+    Description: "Access token for the GitHub API"
+    Type: String
+    NoEcho: 'true'
+  ComposerUser:
+    Description: "Username for the repository composer.wp.dsd.io"
+    Type: String
+  ComposerPassword:
+    Description: "Password for the repository composer.wp.dsd.io"
+    Type: String
+    NoEcho: 'true'
+Mappings:
+  EnvironmentMap:
+    development:
+      Hostname: dev.wp.dsd.io
+    staging:
+      Hostname: staging.wp.dsd.io
+    production:
+      Hostname: prod.wp.dsd.io
+Outputs:
+  DeploymentPipeline:
+    Description: "Name of the AWS CodePipeline deployment pipeline."
+    Value: !Ref DeploymentPipeline
+Conditions:
+Resources:
+  DeploymentPipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Ref AppName
+      ArtifactStore:
+        Location: codepipeline-eu-west-1-339248251867
+        Type: S3
+      RoleArn: arn:aws:iam::613903586696:role/AWS-CodePipeline-Service
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: Application
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: 1
+              Configuration:
+                Owner: ministryofjustice
+                Repo: !Ref RepoName
+                Branch: master
+                OAuthToken: !Ref GitHubToken
+              RunOrder: 1
+              OutputArtifacts:
+                Name: Application
+            - Name: CfTemplates
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: 1
+              Configuration:
+                Owner: ministryofjustice
+                Repo: wp-cloudformation-templates
+                Branch: master
+                OAuthToken: !Ref GitHubToken
+              RunOrder: 1
+              OutputArtifacts:
+                Name: CfTemplates
+            - Name: CfParams
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: 1
+              Configuration:
+                Owner: ministryofjustice
+                Repo: wp-cloudformation-params
+                Branch: master
+                OAuthToken: !Ref GitHubToken
+              RunOrder: 1
+              OutputArtifacts:
+                Name: CfParams
+        - Name: Build
+          Actions:
+            - Name: DockerBuild
+              ActionTypeId:
+                Category: Invoke
+                Owner: AWS
+                Provider: CodeBuild
+                Version: 1
+              InputArtifacts:
+                - Name: Application
+              OutputArtifacts:
+                - Name: DeployTag
+              Configuration:
+                ProjectName: !Ref CodeBuild
+        - Name: DeployDev
+          Actions:
+            - Name: DeployDev
+              ActionTypeId:
+                Category: Invoke
+                Owner: AWS
+                Provider: Lambda
+                Version: 1
+              InputArtifacts:
+                - Name: DeployTag
+                - Name: CfTemplates
+                - Name: CfParams
+              Configuration:
+                FunctionName: !Ref DeployLambda
+                UserParameters: !Join [ '', [ '{"AppName": "', !Ref AppName, '", "Env": "dev"}' ] ]
+        - Name: DeployStaging
+          Actions:
+            - Name: ApproveStagingDeploy
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: 1
+            - Name: DeployStaging
+              ActionTypeId:
+                Category: Invoke
+                Owner: AWS
+                Provider: Lambda
+                Version: 1
+              InputArtifacts:
+                - Name: DeployTag
+                - Name: CfTemplates
+                - Name: CfParams
+              Configuration:
+                FunctionName: !Ref DeployLambda
+                UserParameters: !Join [ '', [ '{"AppName": "', !Ref AppName, '", "Env": "staging"}' ] ]
+        - Name: DeployProduction
+          Actions:
+            - Name: ApproveProductionDeploy
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: 1
+            - Name: DeployProduction
+              ActionTypeId:
+                Category: Invoke
+                Owner: AWS
+                Provider: Lambda
+                Version: 1
+              InputArtifacts:
+                - Name: DeployTag
+                - Name: CfTemplates
+                - Name: CfParams
+              Configuration:
+                FunctionName: !Ref DeployLambda
+                UserParameters: !Join [ '', [ '{"AppName": "', !Ref AppName, '", "Env": "prod"}' ] ]
+  CodeBuild:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: !Ref AppName
+      Description: !Join [ '', [ 'Project to build the WordPress application ', !Ref AppName ] ]
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/docker:1.12.1
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: COMPOSER_USER
+            Value: !Ref ComposerUser
+          - Name: COMPOSER_PASS
+            Value: !Ref ComposerPassword
+      ServiceRole: !Ref "?????????"
+      Source:
+        Type: CODEPIPELINE
+      TimeoutInMinutes: 15
+  DeployLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Join [ '', [ 'deploy-', !Ref AppName ] ]
+      Code: "??????"
+      Description: !Join [ '', [ 'Function to deploy the WordPress application ', !Ref AppName ] ]
+      Handler: index.handler
+      Role: !Ref "?????????"
+      Runtime: nodejs6.10
+      Timeout: 20
