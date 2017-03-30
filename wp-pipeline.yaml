@@ -8,8 +8,8 @@ Parameters:
   RepoName:
     Description: "Name of the GitHub repository (without the owner)"
     Type: String
-    AllowedPattern: "[a-z0-9-/]+"
-    ConstraintDescription: "must only contain lowercase letters, numbers, hyphens and slashes"
+    AllowedPattern: "[A-Za-z0-9-]+"
+    ConstraintDescription: "must only contain letters, numbers and hyphens"
   GitHubToken:
     Description: "Access token for the GitHub API"
     Type: String
@@ -21,6 +21,8 @@ Parameters:
     Description: "Password for the repository composer.wp.dsd.io"
     Type: String
     NoEcho: 'true'
+  LambdaFunctionS3Key:
+    Description: ""
 Mappings:
   EnvironmentMap:
     development:
@@ -42,7 +44,7 @@ Resources:
       ArtifactStore:
         Location: codepipeline-eu-west-1-339248251867
         Type: S3
-      RoleArn: arn:aws:iam::613903586696:role/AWS-CodePipeline-Service
+      RoleArn: !Ref CodePipelineIAMRole
       Stages:
         - Name: Source
           Actions:
@@ -125,6 +127,9 @@ Resources:
                 Owner: AWS
                 Provider: Manual
                 Version: 1
+              Configuration:
+                ExternalEntityLink: !Join [ '', [ 'https://', !Ref AppName, '.', !FindInMap [ EnvironmentMap, 'staging', Hostname ] ] ]
+                CustomData: "Please test the site at this URL."
             - Name: DeployStaging
               ActionTypeId:
                 Category: Invoke
@@ -146,6 +151,9 @@ Resources:
                 Owner: AWS
                 Provider: Manual
                 Version: 1
+              Configuration:
+                ExternalEntityLink: !Join [ '', [ 'https://', !Ref AppName, '.', !FindInMap [ EnvironmentMap, 'production', Hostname ] ] ]
+                CustomData: "Please test the site at this URL."
             - Name: DeployProduction
               ActionTypeId:
                 Category: Invoke
@@ -175,7 +183,7 @@ Resources:
             Value: !Ref ComposerUser
           - Name: COMPOSER_PASS
             Value: !Ref ComposerPassword
-      ServiceRole: !Ref "?????????"
+      ServiceRole: !Ref CodeBuildIAMRole
       Source:
         Type: CODEPIPELINE
       TimeoutInMinutes: 15
@@ -183,9 +191,152 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Join [ '', [ 'deploy-', !Ref AppName ] ]
-      Code: "??????"
       Description: !Join [ '', [ 'Function to deploy the WordPress application ', !Ref AppName ] ]
+      Code:
+        S3Bucket: codepipeline-eu-west-1-339248251867
+        S3Key: lambda-functions/deploy.zip
       Handler: index.handler
-      Role: !Ref "?????????"
+      Role: !Ref DeployLambdaIAMRole
       Runtime: nodejs6.10
       Timeout: 20
+  CodePipelineIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join [ '', [ 'codepipeline-', !Ref AppName ] ]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: "sts:AssumeRole"
+            Effect: Allow
+            Principal:
+              Service:
+                - "codepipeline.amazonaws.com"
+      Policies:
+        - PolicyName: Policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                Effect: Allow
+                Resource: "arn:aws:s3:::codepipeline-eu-west-1-339248251867"
+              - Action:
+                  - "cloudwatch:*"
+                  - "iam:PassRole"
+                Effect: Allow
+                Resource: "*"
+              - Action: "lambda:ListFunctions"
+                Effect: Allow
+                Resource: "*"
+              - Action: "lambda:InvokeFunction"
+                Effect: Allow
+                Resource: !Ref DeployLambda
+              - Action:
+                  - "codebuild:BatchGetBuilds"
+                  - "codebuild:StartBuild"
+                Effect: Allow
+                Resource: !Ref CodeBuild
+  CodeBuildIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join [ '', [ 'codebuild-', !Ref AppName ] ]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: "sts:AssumeRole"
+            Effect: Allow
+            Principal:
+              Service:
+                - "codebuild.amazonaws.com"
+      Policies:
+        - PolicyName: Policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                Effect: Allow
+                Resource: "arn:aws:s3:::codepipeline-eu-west-1-339248251867"
+              - Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Effect: Allow
+                Resource: 
+                  - !Join [ '', [ 'arn:aws:logs:eu-west-1:613903586696:log-group:/aws/codebuild/', !Ref AppName ] ]
+                  - !Join [ '', [ 'arn:aws:logs:eu-west-1:613903586696:log-group:/aws/codebuild/', !Ref AppName, ':*' ] ]
+              - Action:
+                  - "codepipeline:GetPipeline"
+                  - "codepipeline:GetPipelineState"
+                  - "codepipeline:GetPipelineExecution"
+                  - "codepipeline:ListActionTypes"
+                Effect: Allow
+                Resource: !Ref DeploymentPipeline
+              - Action:
+                  - "ecr:GetAuthorizationToken"
+                  - "ecr:BatchCheckLayerAvailability"
+                  - "ecr:GetDownloadUrlForLayer"
+                  - "ecr:GetRepositoryPolicy"
+                  - "ecr:DescribeRepositories"
+                  - "ecr:ListImages"
+                  - "ecr:DescribeImages"
+                  - "ecr:BatchGetImage"
+                  - "ecr:InitiateLayerUpload"
+                  - "ecr:UploadLayerPart"
+                  - "ecr:CompleteLayerUpload"
+                  - "ecr:PutImage"
+                Effect: Allow
+                Resource: !Join [ '', [ 'arn:aws:ecr:eu-west-2:613903586696:repository/wp/', !Ref AppName ] ]
+  DeployLambdaIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join [ '', [ 'deploy-lambda-', !Ref AppName ] ]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: "sts:AssumeRole"
+            Effect: Allow
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+      Policies:
+        - PolicyName: Policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action: "s3:GetObject"
+                Effect: Allow
+                Resource: "arn:aws:s3:::codepipeline-eu-west-1-339248251867"
+              - Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Effect: Allow
+                Resource:
+                  - !Join [ '', [ 'arn:aws:logs:eu-west-1:613903586696:log-group:/aws/lambda/deploy-', !Ref AppName ] ]
+                  - !Join [ '', [ 'arn:aws:logs:eu-west-1:613903586696:log-group:/aws/lambda/deploy-', !Ref AppName, ':*' ] ]
+              - Action:
+                  - "cloudformation:DescribeStacks"
+                  - "cloudformation:UpdateStack"
+                Effect: Allow
+                Resource: !Join [ '', [ 'arn:aws:cloudformation:eu-west-2:613903586696:stack/', !Ref AppName, '-*' ] ]
+              - Action:
+                  - "codepipeline:PutJobFailureResult"
+                  - "codepipeline:PutJobSuccessResult"
+                Effect: Allow
+                Resource: !Ref DeploymentPipeline
+        - PolicyName: PolicyForCloudFormation
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - "ecs:DeregisterTaskDefinition"
+                  - "ecs:RegisterTaskDefinition"
+                Effect: Allow
+                Resource: !Join [ '', [ 'arn:aws:ecs:eu-west-2:613903586696:task-definition/', !Ref AppName, '-*' ] ]
+              - Action:
+                  - "ecs:UpdateService"
+                Effect: Allow
+                Resource: !Join [ '', [ 'arn:aws:ecs:eu-west-2:613903586696:service/', !Ref AppName, '-*' ] ]
