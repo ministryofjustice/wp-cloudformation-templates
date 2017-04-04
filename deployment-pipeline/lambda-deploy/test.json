@@ -1,0 +1,56 @@
+{
+    "CodePipeline.job": {
+        "id": "11111111-abcd-1111-abcd-111111abcdef",
+        "accountId": "111111111111",
+        "data": {
+            "actionConfiguration": {
+                "configuration": {
+                    "FunctionName": "deployWpWeekly",
+                    "UserParameters": "dev"
+                }
+            },
+            "inputArtifacts": [
+                {
+                    "location": {
+                        "s3Location": {
+                            "bucketName": "codepipeline-eu-west-1-339248251867",
+                            "objectKey": "tp-weekly/CfTemplate/06WQiRe.zip"
+                        },
+                        "type": "S3"
+                    },
+                    "revision": null,
+                    "name": "CfTemplate"
+                },
+                {
+                    "location": {
+                        "s3Location": {
+                            "bucketName": "codepipeline-eu-west-1-339248251867",
+                            "objectKey": "tp-weekly/CfParams/2c9BMOX.zip"
+                        },
+                        "type": "S3"
+                    },
+                    "revision": null,
+                    "name": "CfParams"
+                },
+                {
+                    "location": {
+                        "s3Location": {
+                            "bucketName": "codepipeline-eu-west-1-339248251867",
+                            "objectKey": "tp-weekly/DeployTag/Ns7W8Dz"
+                        },
+                        "type": "S3"
+                    },
+                    "revision": null,
+                    "name": "DeployTag"
+                }
+            ],
+            "outputArtifacts": [],
+            "artifactCredentials": {
+                "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+                "sessionToken": "TOKEN",
+                "accessKeyId": "AKIAIOSFODNN7EXAMPLE"
+            },
+            "continuationToken": "A continuation token if continuing job"
+        }
+    }
+}
