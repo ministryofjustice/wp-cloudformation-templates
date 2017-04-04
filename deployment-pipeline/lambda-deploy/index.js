@@ -18,7 +18,7 @@ exports.handler = function(event, context) {
 
     console.log('CodePipeline Job ID:', jobId);
     console.log('Going to deploy:', userParams);
-    console.log('Expecting to find params file at:', paramsFilename);
+    console.log('Expecting to find params file at:', cfParamsFilename);
 
     // Notify CodePipline of successful job, and exit with success
     var exitSuccess = function(message) {
