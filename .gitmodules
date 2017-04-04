@@ -1,0 +1,3 @@
+[submodule "deployment-pipeline/lambda-deploy"]
+	path = deployment-pipeline/lambda-deploy
+	url = git@github.com:ministryofjustice/wp-lambda-deploy.git
