@@ -140,7 +140,7 @@ Mappings:
 Outputs:
   DNSName:
     Description: "DNS name of the service. Use this directly or as a CNAME."
-    Value: !Ref DNSRecord
+    Value: !If [ IsActive, !Ref DNSRecord, 'None' ]
 Conditions:
   SmtpUseSsl: !Equals [ !Ref SmtpSecurity, "SSL" ]
   SmtpUseStarttls: !Equals [ !Ref SmtpSecurity, "STARTTLS" ]
