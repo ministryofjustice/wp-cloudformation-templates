@@ -237,6 +237,7 @@ Resources:
               Value: !Ref WpNonceSalt
       Family: !Ref AWS::StackName
   WebService:
+    Condition: IsActive
     Type: AWS::ECS::Service
     DependsOn:
       - TargetGroup
@@ -346,6 +347,7 @@ Resources:
         - !FindInMap [ EnvironmentMap, !Ref Environment, ELBSubnet1 ]
         - !FindInMap [ EnvironmentMap, !Ref Environment, ELBSubnet2 ]
   TargetGroup:
+    Condition: IsActive
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     DependsOn:
       - LoadBalancer
@@ -358,6 +360,7 @@ Resources:
         - Key: deregistration_delay.timeout_seconds
           Value: 20
   HttpListener:
+    Condition: IsActive
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn:
       - TargetGroup
@@ -369,6 +372,7 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref TargetGroup
   HttpsListener:
+    Condition: IsActive
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn:
       - TargetGroup
@@ -385,6 +389,7 @@ Resources:
   # DNS record
   ##
   DNSRecord:
+    Condition: IsActive
     Type: AWS::Route53::RecordSet
     DependsOn:
       - LoadBalancer
