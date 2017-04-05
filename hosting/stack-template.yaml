@@ -354,6 +354,9 @@ Resources:
       Port: '80'
       VpcId: !FindInMap [ EnvironmentMap, !Ref Environment, TargetGroupVPC ]
       HealthCheckPath: "/wp/readme.html"
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 20
   HttpListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn:
