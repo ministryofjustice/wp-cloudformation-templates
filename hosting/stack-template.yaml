@@ -98,6 +98,13 @@ Parameters:
     Description: "NONCE_SALT for WordPress"
     Type: String
     NoEcho: 'true'
+  Active:
+    Description: "If the service is 'turned on'. Off services will retain data but will not have containers/load balancers."
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
 Mappings:
   EnvironmentMap:
     development:
@@ -141,6 +148,9 @@ Conditions:
   UseCustomSSLCertificateArn: !Not [ !Equals [ !Ref CustomSSLCertificateArn, "" ] ]
   HasSiteIpWhitelist: !Not [ !Equals [ !Ref SiteWhitelistIps, "" ] ]
   DoesNotHaveSiteIpWhitelist: !Equals [ !Ref SiteWhitelistIps, "" ]
+  IsActive: !Or
+    - !Equals [ !Ref Active, "true" ]
+    - !Equals [ !Ref Environment, "production" ]
 Resources:
   ##
   # ECS task & service
@@ -326,6 +336,7 @@ Resources:
   # Load Balancer
   ##
   LoadBalancer:
+    Condition: IsActive
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Scheme: 'internet-facing'
