@@ -340,6 +340,7 @@ Resources:
               - Action:
                   - "cloudformation:DescribeStacks"
                   - "cloudformation:UpdateStack"
+                  - "cloudformation:CreateStack"
                 Effect: Allow
                 Resource: !Join [ '', [ 'arn:aws:cloudformation:eu-west-2:', !Ref 'AWS::AccountId', ':stack/', !Ref AppName, '-*' ] ]
               - Action:
@@ -358,6 +359,7 @@ Resources:
                   - "ecs:DeregisterTaskDefinition"
                   - "ecs:DescribeTaskDefinition"
                   - "ecs:ListTaskDefinitions"
+                  - "ecs:CreateService"
                   - "ecs:UpdateService"
                   - "ecs:DescribeServices"
                   - "ecs:ListServices"
@@ -380,7 +382,17 @@ Resources:
                   - !Join [ '', [ 'arn:aws:iam::', !Ref 'AWS::AccountId', ':user/', !Ref AppName, '-*' ] ]
                   - !Join [ '', [ 'arn:aws:iam::', !Ref 'AWS::AccountId', ':group/WordPress' ] ]
               - Action:
+                  - "iam:PassRole"
+                Effect: Allow
+                Resource:
+                  - !Join [ '', [ 'arn:aws:iam::', !Ref 'AWS::AccountId', ':role/ecsServiceRole' ] ]
+              - Action:
                   - "elasticloadbalancing:*"
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - "route53:ListHostedZones"
+                  - "route53:GetChange"
                 Effect: Allow
                 Resource: "*"
               - Action:
