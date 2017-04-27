@@ -164,10 +164,11 @@ Resources:
         - Name: web
           Essential: 'true'
           Image: !Ref DockerImage
-          Memory: '300'
+          Memory: 1000
+          MemoryReservation: 300
           Privileged: 'true'
           PortMappings:
-            - ContainerPort: '80'
+            - ContainerPort: 80
           LogConfiguration:
             LogDriver: awslogs
             Options:
