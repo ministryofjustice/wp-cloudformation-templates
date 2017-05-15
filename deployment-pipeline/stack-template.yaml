@@ -86,7 +86,7 @@ Resources:
               Configuration:
                 Owner: ministryofjustice
                 Repo: wp-cloudformation-params
-                Branch: master
+                Branch: !Ref AppName
                 OAuthToken: !Ref GitHubToken
               RunOrder: 1
               OutputArtifacts:
