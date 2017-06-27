@@ -1,0 +1,50 @@
+[
+  {
+    "ParameterKey": "ECSCluster",
+    "ParameterValue": "wordpress"
+  }, 
+  {
+    "ParameterKey": "SSLCertificateArn",
+    "ParameterValue": ""
+  },
+  {
+    "ParameterKey": "DockerImage",
+    "ParameterValue": ""
+  },
+  {
+  	"ParameterKey": "DbHost",
+  	"ParameterValue": ""
+  },
+  {
+  	"ParameterKey": "DbName",
+  	"ParameterValue": ""
+  },
+  {
+  	"ParameterKey": "DbUsername",
+  	"ParameterValue": ""
+  },
+  {
+  	"ParameterKey": "DbPassword",
+  	"ParameterValue": ""
+  },
+  {
+  	"ParameterKey": "SmtpHost",
+  	"ParameterValue": ""
+  },
+  {
+  	"ParameterKey": "SmtpUsername",
+  	"ParameterValue": ""
+  },
+  {
+  	"ParameterKey": "SmtpPassword",
+  	"ParameterValue": ""
+  },
+  {
+  	"ParameterKey": "SmtpSecurity",
+  	"ParameterValue": "STARTTLS"
+  },
+  {
+  	"ParameterKey": "LoginWhitelistIps",
+  	"ParameterValue": ""
+  }
+]

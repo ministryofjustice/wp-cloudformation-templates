@@ -1,0 +1,8 @@
+ENV_FILE=$1
+if [ -z "$ENV_FILE" ]; then 
+  echo "USAGE: $0 <env file>"
+fi
+ENV=`basename $1`
+ENV=${ENV%%.*} # strips the conf file name to remove everything after the first dot
+
+NAME=mojintranet-$ENV-$(date +%s); aws cloudformation create-stack --template-body "file://$PWD/hosting.yaml" --parameters "file://$ENV_FILE" --stack-name $NAME --capabilities CAPABILITY_IAM

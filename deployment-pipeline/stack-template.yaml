@@ -1,0 +1,404 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  AppName:
+    Description: "Name of the application"
+    Type: String
+    AllowedPattern: "[a-z0-9-]+"
+    ConstraintDescription: "must only contain lowercase letters, numbers and hyphens"
+  RepoName:
+    Description: "Name of the GitHub repository (without the owner)"
+    Type: String
+    AllowedPattern: "[A-Za-z0-9-]+"
+    ConstraintDescription: "must only contain letters, numbers and hyphens"
+  GitHubToken:
+    Description: "Access token for the GitHub API"
+    Type: String
+    NoEcho: 'true'
+  ComposerUser:
+    Description: "Username for the repository composer.wp.dsd.io"
+    Type: String
+  ComposerPassword:
+    Description: "Password for the repository composer.wp.dsd.io"
+    Type: String
+  LambdaS3ObjectKey:
+    Description: "S3 key of the zip file to use for lambda deploy function."
+    Type: String
+Mappings:
+  EnvironmentMap:
+    development:
+      Hostname: dev.wp.dsd.io
+    staging:
+      Hostname: staging.wp.dsd.io
+    production:
+      Hostname: prod.wp.dsd.io
+Outputs:
+  DeploymentPipeline:
+    Description: "Name of the AWS CodePipeline deployment pipeline."
+    Value: !Ref DeploymentPipeline
+Resources:
+  DeploymentPipeline:
+    Type: AWS::CodePipeline::Pipeline
+    DependsOn:
+      - CodePipelineIAMRole
+    Properties:
+      Name: !Ref AppName
+      ArtifactStore:
+        Location: codepipeline-eu-west-1-339248251867
+        Type: S3
+      RoleArn: !GetAtt CodePipelineIAMRole.Arn
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: Application
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: 1
+              Configuration:
+                Owner: ministryofjustice
+                Repo: !Ref RepoName
+                Branch: master
+                OAuthToken: !Ref GitHubToken
+              RunOrder: 1
+              OutputArtifacts:
+                - Name: Application
+            - Name: CfTemplates
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: 1
+              Configuration:
+                Owner: ministryofjustice
+                Repo: wp-cloudformation-templates
+                Branch: master
+                OAuthToken: !Ref GitHubToken
+              RunOrder: 1
+              OutputArtifacts:
+                - Name: CfTemplates
+            - Name: CfParams
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: 1
+              Configuration:
+                Owner: ministryofjustice
+                Repo: wp-cloudformation-params
+                Branch: !Ref AppName
+                OAuthToken: !Ref GitHubToken
+              RunOrder: 1
+              OutputArtifacts:
+                - Name: CfParams
+        - Name: Build
+          Actions:
+            - Name: DockerBuild
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: 1
+              InputArtifacts:
+                - Name: Application
+              OutputArtifacts:
+                - Name: DeployTag
+              Configuration:
+                ProjectName: !Ref CodeBuild
+        - Name: DeployDev
+          Actions:
+            - Name: DeployDev
+              ActionTypeId:
+                Category: Invoke
+                Owner: AWS
+                Provider: Lambda
+                Version: 1
+              InputArtifacts:
+                - Name: DeployTag
+                - Name: CfTemplates
+                - Name: CfParams
+              Configuration:
+                FunctionName: !Ref DeployLambda
+                UserParameters: !Join [ '', [ '{"AppName": "', !Ref AppName, '", "Env": "dev"}' ] ]
+        - Name: DeployStaging
+          Actions:
+            - Name: ApproveStagingDeploy
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: 1
+              Configuration:
+                ExternalEntityLink: !Join [ '', [ 'https://', !Ref AppName, '.', !FindInMap [ EnvironmentMap, 'development', Hostname ] ] ]
+                CustomData: "Deploy from dev to staging?"
+              RunOrder: 1
+            - Name: DeployStaging
+              ActionTypeId:
+                Category: Invoke
+                Owner: AWS
+                Provider: Lambda
+                Version: 1
+              InputArtifacts:
+                - Name: DeployTag
+                - Name: CfTemplates
+                - Name: CfParams
+              Configuration:
+                FunctionName: !Ref DeployLambda
+                UserParameters: !Join [ '', [ '{"AppName": "', !Ref AppName, '", "Env": "staging"}' ] ]
+              RunOrder: 2
+        - Name: DeployProduction
+          Actions:
+            - Name: ApproveProductionDeploy
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: 1
+              Configuration:
+                ExternalEntityLink: !Join [ '', [ 'https://', !Ref AppName, '.', !FindInMap [ EnvironmentMap, 'staging', Hostname ] ] ]
+                CustomData: "Deploy from staging to production?"
+              RunOrder: 1
+            - Name: DeployProduction
+              ActionTypeId:
+                Category: Invoke
+                Owner: AWS
+                Provider: Lambda
+                Version: 1
+              InputArtifacts:
+                - Name: DeployTag
+                - Name: CfTemplates
+                - Name: CfParams
+              Configuration:
+                FunctionName: !Ref DeployLambda
+                UserParameters: !Join [ '', [ '{"AppName": "', !Ref AppName, '", "Env": "prod"}' ] ]
+              RunOrder: 2
+  CodeBuild:
+    Type: AWS::CodeBuild::Project
+    DependsOn:
+      - CodeBuildIAMRole
+    Properties:
+      Name: !Ref AppName
+      Description: !Join [ '', [ 'Project to build the WordPress application ', !Ref AppName ] ]
+      Artifacts:
+        Type: CODEPIPELINE
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/docker:1.12.1
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: COMPOSER_USER
+            Value: !Ref ComposerUser
+          - Name: COMPOSER_PASS
+            Value: !Ref ComposerPassword
+      ServiceRole: !GetAtt CodeBuildIAMRole.Arn
+      Source:
+        Type: CODEPIPELINE
+      TimeoutInMinutes: 15
+  DeployLambda:
+    Type: AWS::Lambda::Function
+    DependsOn:
+      - DeployLambdaIAMRole
+    Properties:
+      FunctionName: !Join [ '', [ !Ref AppName, '-deploy' ] ]
+      Description: !Join [ '', [ 'Function to deploy the WordPress application ', !Ref AppName ] ]
+      Code:
+        S3Bucket: codepipeline-eu-west-1-339248251867
+        S3Key: !Ref LambdaS3ObjectKey
+      Handler: index.handler
+      Role: !GetAtt DeployLambdaIAMRole.Arn
+      Runtime: nodejs6.10
+      Timeout: 20
+  CodePipelineIAMRole:
+    Type: AWS::IAM::Role
+    DependsOn:
+      - DeployLambda
+      - CodeBuild
+    Properties:
+      RoleName: !Join [ '', [ !Ref AppName, '-codepipeline' ] ]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: "sts:AssumeRole"
+            Effect: Allow
+            Principal:
+              Service:
+                - "codepipeline.amazonaws.com"
+      Policies:
+        - PolicyName: Policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                Effect: Allow
+                Resource:
+                  - "arn:aws:s3:::codepipeline-eu-west-1-339248251867"
+                  - "arn:aws:s3:::codepipeline-eu-west-1-339248251867/*"
+              - Action:
+                  - "cloudwatch:*"
+                  - "iam:PassRole"
+                Effect: Allow
+                Resource: "*"
+              - Action: "lambda:ListFunctions"
+                Effect: Allow
+                Resource: "*"
+              - Action: "lambda:InvokeFunction"
+                Effect: Allow
+                Resource: !GetAtt DeployLambda.Arn
+              - Action:
+                  - "codebuild:BatchGetBuilds"
+                  - "codebuild:StartBuild"
+                Effect: Allow
+                Resource: !GetAtt CodeBuild.Arn
+  CodeBuildIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join [ '', [ !Ref AppName, '-codebuild' ] ]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: "sts:AssumeRole"
+            Effect: Allow
+            Principal:
+              Service:
+                - "codebuild.amazonaws.com"
+      Policies:
+        - PolicyName: Policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - "s3:PutObject"
+                  - "s3:GetObject"
+                Effect: Allow
+                Resource:
+                  - "arn:aws:s3:::codepipeline-eu-west-1-339248251867"
+                  - "arn:aws:s3:::codepipeline-eu-west-1-339248251867/*"
+              - Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Effect: Allow
+                Resource: 
+                  - !Join [ '', [ 'arn:aws:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/codebuild/', !Ref AppName ] ]
+                  - !Join [ '', [ 'arn:aws:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/codebuild/', !Ref AppName, ':*' ] ]
+              - Action:
+                  - "codepipeline:GetPipeline"
+                  - "codepipeline:GetPipelineState"
+                  - "codepipeline:GetPipelineExecution"
+                  - "codepipeline:ListActionTypes"
+                Effect: Allow
+                Resource: !Join [ '', [ 'arn:aws:codepipeline:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':', !Ref AppName ] ]
+              - Action:
+                  - "ecr:BatchCheckLayerAvailability"
+                  - "ecr:GetDownloadUrlForLayer"
+                  - "ecr:GetRepositoryPolicy"
+                  - "ecr:DescribeRepositories"
+                  - "ecr:ListImages"
+                  - "ecr:DescribeImages"
+                  - "ecr:BatchGetImage"
+                  - "ecr:InitiateLayerUpload"
+                  - "ecr:UploadLayerPart"
+                  - "ecr:CompleteLayerUpload"
+                  - "ecr:PutImage"
+                Effect: Allow
+                Resource: !Join [ '', [ 'arn:aws:ecr:eu-west-2:', !Ref 'AWS::AccountId', ':repository/wp/', !Ref AppName ] ]
+              - Action: "ecr:GetAuthorizationToken"
+                Effect: Allow
+                Resource: "*"
+  DeployLambdaIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join [ '', [ !Ref AppName, '-lambda-deploy' ] ]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action: "sts:AssumeRole"
+            Effect: Allow
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+      Policies:
+        - PolicyName: Policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action: "s3:GetObject"
+                Effect: Allow
+                Resource:
+                  - "arn:aws:s3:::codepipeline-eu-west-1-339248251867"
+                  - "arn:aws:s3:::codepipeline-eu-west-1-339248251867/*"
+              - Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Effect: Allow
+                Resource:
+                  - !Join [ '', [ 'arn:aws:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/lambda/', !Ref AppName, '-deploy' ] ]
+                  - !Join [ '', [ 'arn:aws:logs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':log-group:/aws/lambda/', !Ref AppName, '-deploy:*' ] ]
+              - Action:
+                  - "cloudformation:DescribeStacks"
+                  - "cloudformation:UpdateStack"
+                  - "cloudformation:CreateStack"
+                Effect: Allow
+                Resource: !Join [ '', [ 'arn:aws:cloudformation:eu-west-2:', !Ref 'AWS::AccountId', ':stack/', !Ref AppName, '-*' ] ]
+              - Action:
+                  - "codepipeline:PutJobFailureResult"
+                  - "codepipeline:PutJobSuccessResult"
+                Effect: Allow
+                Resource:
+                  # CodePipeline actions don't support resources, so we have to use "*" wildcard instead of ARN/name of our pipeline
+                  - "*"
+        - PolicyName: PolicyForCloudFormation
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - "ecs:RegisterTaskDefinition"
+                  - "ecs:DeregisterTaskDefinition"
+                  - "ecs:DescribeTaskDefinition"
+                  - "ecs:ListTaskDefinitions"
+                  - "ecs:CreateService"
+                  - "ecs:UpdateService"
+                  - "ecs:DescribeServices"
+                  - "ecs:ListServices"
+                Effect: Allow
+                Resource:
+                  # ECS actions don't support resources, so we have to use "*" wildcard instead of ARN/name of our task definitions & services
+                  - "*"
+              - Action:
+                  - "s3:*"
+                Effect: Allow
+                Resource: !Join [ '', [ 'arn:aws:s3:::', !Ref AppName, '-*' ] ]
+              - Action:
+                  - "sns:*"
+                Effect: Allow
+                Resource: !Join [ '', [ 'arn:aws:sns:eu-west-2:', !Ref 'AWS::AccountId', ':', !Ref AppName, '-*' ] ]
+              - Action:
+                  - "iam:*"
+                Effect: Allow
+                Resource:
+                  - !Join [ '', [ 'arn:aws:iam::', !Ref 'AWS::AccountId', ':user/', !Ref AppName, '-*' ] ]
+                  - !Join [ '', [ 'arn:aws:iam::', !Ref 'AWS::AccountId', ':group/WordPress' ] ]
+              - Action:
+                  - "iam:PassRole"
+                Effect: Allow
+                Resource:
+                  - !Join [ '', [ 'arn:aws:iam::', !Ref 'AWS::AccountId', ':role/ecsServiceRole' ] ]
+              - Action:
+                  - "elasticloadbalancing:*"
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - "route53:ListHostedZones"
+                  - "route53:GetChange"
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - "route53:*"
+                Effect: Allow
+                Resource:
+                  - "arn:aws:route53:::hostedzone/Z29SSUU541F3GJ"
+                  - "arn:aws:route53:::hostedzone/Z1DKKIUXG25KAH"
+                  - "arn:aws:route53:::hostedzone/ZDGHGJRBZZRPF"
