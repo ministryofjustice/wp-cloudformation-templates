@@ -27,6 +27,11 @@ Outputs:
   SNSTopic:
     Description: "The SNS queue attached to the media uploads bucket; used by yas3fs to notify of changes in the bucket"  
     Value: !Ref StorageTopic
+  StorageUser:
+    Description: A user allowed to access the shared bucket for the use of MOJIntranet containers
+    Value: !Ref StorageUser
+    Export:
+      Name: !Join [ "", [ !Ref "AWS::StackName", "-StorageUser" ] ]    
 
 Resources:    
   ##
@@ -107,7 +112,4 @@ Resources:
               - Action: sqs:*
                 Effect: Allow
                 Resource: !Join [ '', [ 'arn:aws:sqs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':yas3fs-*' ] ]
-  StorageUserAccessKey:
-    Type: AWS::IAM::AccessKey
-    Properties:
-      UserName: !Ref StorageUser
+

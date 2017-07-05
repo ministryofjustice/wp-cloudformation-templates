@@ -13,12 +13,6 @@ Parameters:
     Type: String
     Default: development
 
-  AwsAccessKeyId:
-    Description: "Credentials for the AWS account that holds the media upload S3 bucket"
-    Type: String
-  AwsSecretAccessKey:
-    Description: "Credentials for the AWS account that holds the media upload S3 bucket"
-    Type: String
   MediaUploadsS3Bucket:
     Description: "the bucket+path where media will be uploaded, e.g. moj-intranet-demo/wp-content/uploads/"
     Type: String
@@ -127,6 +121,8 @@ Parameters:
     AllowedValues:
       - 'true'
       - 'false'
+
+
 Mappings:
   EnvironmentMap:
     demo:
@@ -144,6 +140,23 @@ Mappings:
       SecurityGroup: sg-3f76fd46
       DesiredContainerCount: 1
       InstanceType: t2.medium
+
+    qa:
+      HostedZone: intranet.dsd.io.
+      AWSLogGroup: qa
+      ECSCluster: qa
+      ECSRole: ecsInstanceRole
+      # *.demo.intranet.dsd.io cert
+      SSLCertificateArn: arn:aws:acm:eu-west-1:715475543920:certificate/2d57ac86-0129-4b29-9403-ac9f7323084b
+      TargetGroupVPC: vpc-b4b65ed3
+      # dev-servers-zoneC & B respectively subnets
+      ELBSubnet1: subnet-8db84cea 
+      ELBSubnet2: subnet-e7de38bc
+      # MOJ internal IPs
+      SecurityGroup: sg-3f76fd46
+      DesiredContainerCount: 1
+      InstanceType: t2.medium
+
 
 
 Conditions:
@@ -186,6 +199,7 @@ Resources:
               awslogs-group: !FindInMap [ EnvironmentMap, !Ref Environment, AWSLogGroup ]
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: !Ref AppName
+
           Environment:
             - Name: LB_IP_RANGE
               Value: 10.0.0.0/16
@@ -215,9 +229,9 @@ Resources:
             - Name: ENVIRONMENT
               Value: !Ref Environment
             - Name: AWS_ACCESS_KEY_ID
-              Value: !Ref AwsAccessKeyId
+              Value: !Ref ContainerUserAccessKey
             - Name: AWS_SECRET_ACCESS_KEY
-              Value: !Ref AwsSecretAccessKey
+              Value: !GetAtt ContainerUserAccessKey.SecretAccessKey
             - Name: MEDIA_UPLOADS_S3_BUCKET
               Value: !Ref MediaUploadsS3Bucket  
             - Name: SNS_TOPIC
@@ -351,3 +365,11 @@ Resources:
         DNSName: !GetAtt LoadBalancer.DNSName
         HostedZoneId: !GetAtt LoadBalancer.CanonicalHostedZoneID
 
+
+  ##
+  # Credentials
+  ##
+  ContainerUserAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !ImportValue { "Fn::Sub" : "mojintranet-${Environment}-shared-StorageUser" }
