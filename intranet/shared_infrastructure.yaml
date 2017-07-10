@@ -21,12 +21,16 @@ Conditions:
   DoesNotHaveSiteIpWhitelist: !Equals [ !Ref SiteWhitelistIps, "" ]
 
 Outputs:
-  S3BucketName:
+  StorageBucketName:
     Description: "The S3 bucket for media uploads"
-    Value: !Ref Storage       
+    Value: !Ref Storage     
+    Export:
+      Name: !Join [ "", [ !Ref "AWS::StackName", "-StorageBucketName" ] ]  
   SNSTopic:
     Description: "The SNS queue attached to the media uploads bucket; used by yas3fs to notify of changes in the bucket"  
     Value: !Ref StorageTopic
+    Export:
+      Name: !Join [ "", [ !Ref "AWS::StackName", "-SNSTopic" ] ]
   StorageUser:
     Description: A user allowed to access the shared bucket for the use of MOJIntranet containers
     Value: !Ref StorageUser

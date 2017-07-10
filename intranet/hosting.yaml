@@ -12,16 +12,19 @@ Parameters:
     Description: "The environment this application should run in."
     Type: String
     Default: development
+  SharedStack:
+    Description: "The name of the shared infrastructure stack to use"
+    Type: String
+    Default: ""
+  Active:
+    Description: "If the service is 'turned on'. Off services will retain data but will not have containers/load balancers."
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
 
-  MediaUploadsS3Bucket:
-    Description: "the bucket+path where media will be uploaded, e.g. moj-intranet-demo/wp-content/uploads/"
-    Type: String
-  SnsTopic:
-    Description: ""
-    Type: String
-  AwsDefaultRegion:
-    Description: ""
-    Type: String
+
   DbHost:
     Description: "Database server hostname"
     Type: String
@@ -114,13 +117,7 @@ Parameters:
     Description: "NONCE_SALT for WordPress"
     Type: String
     NoEcho: 'true'
-  Active:
-    Description: "If the service is 'turned on'. Off services will retain data but will not have containers/load balancers."
-    Type: String
-    Default: 'true'
-    AllowedValues:
-      - 'true'
-      - 'false'
+
 
 
 Mappings:
@@ -178,6 +175,7 @@ Outputs:
   
 
 Resources:
+
   ##
   # ECS task & service
   ##
@@ -198,7 +196,7 @@ Resources:
             Options:
               awslogs-group: !FindInMap [ EnvironmentMap, !Ref Environment, AWSLogGroup ]
               awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: !Ref AppName
+              awslogs-stream-prefix: !Ref "AWS::StackName"
 
           Environment:
             - Name: LB_IP_RANGE
@@ -233,11 +231,11 @@ Resources:
             - Name: AWS_SECRET_ACCESS_KEY
               Value: !GetAtt ContainerUserAccessKey.SecretAccessKey
             - Name: MEDIA_UPLOADS_S3_BUCKET
-              Value: !Ref MediaUploadsS3Bucket  
+              Value: !Join [ '', [ !ImportValue { "Fn::Sub" : "${SharedStack}-StorageBucketName" }  , '/uploads' ] ]
             - Name: SNS_TOPIC
-              Value: !Ref SnsTopic
+              Value: !ImportValue { "Fn::Sub" : "${SharedStack}-SNSTopic" }
             - Name: AWS_DEFAULT_REGION
-              Value: !Ref AwsDefaultRegion
+              Value: !Ref "AWS::Region"
             - Name: DB_HOST
               Value: !Ref DbHost
             - Name: DB_USER
@@ -372,4 +370,4 @@ Resources:
   ContainerUserAccessKey:
     Type: AWS::IAM::AccessKey
     Properties:
-      UserName: !ImportValue { "Fn::Sub" : "mojintranet-${Environment}-shared-StorageUser" }
+      UserName: !ImportValue { "Fn::Sub" : "${SharedStack}-StorageUser" }  
