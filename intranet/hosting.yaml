@@ -11,7 +11,11 @@ Parameters:
   Environment:
     Description: "The environment this application should run in."
     Type: String
-    Default: development
+    Default: qa
+    AllowedValues:
+      - qa
+      - demo
+      - prod
   SharedStack:
     Description: "The name of the shared infrastructure stack to use"
     Type: String
@@ -23,7 +27,6 @@ Parameters:
     AllowedValues:
       - 'true'
       - 'false'
-
 
   DbHost:
     Description: "Database server hostname"
@@ -137,6 +140,8 @@ Mappings:
       SecurityGroup: sg-3f76fd46
       DesiredContainerCount: 1
       InstanceType: t2.medium
+      StorageUserGroups:
+        - DemoIntranetSites
 
     qa:
       HostedZone: intranet.dsd.io.
@@ -171,7 +176,10 @@ Outputs:
   DNSName:
     Description: "DNS name of the service. Use this directly or as a CNAME."
     Value: !If [ IsActive, !Ref DNSRecord, 'None' ]
-  
+  StorageUser:
+    Description: A user allowed to access the shared bucket for the use of MOJIntranet containers
+    Value: !Ref StorageUser
+    
   
 
 Resources:
@@ -227,9 +235,9 @@ Resources:
             - Name: ENVIRONMENT
               Value: !Ref Environment
             - Name: AWS_ACCESS_KEY_ID
-              Value: !Ref ContainerUserAccessKey
+              Value: !Ref StorageUserAccessKey
             - Name: AWS_SECRET_ACCESS_KEY
-              Value: !GetAtt ContainerUserAccessKey.SecretAccessKey
+              Value: !GetAtt StorageUserAccessKey.SecretAccessKey
             - Name: MEDIA_UPLOADS_S3_BUCKET
               Value: !Join [ '', [ !ImportValue { "Fn::Sub" : "${SharedStack}-StorageBucketName" }  , '/uploads' ] ]
             - Name: SNS_TOPIC
@@ -365,9 +373,44 @@ Resources:
 
 
   ##
-  # Credentials
+  # User to access media bucket; the user should technically be part of the shared stack, but AWS limits access keys to 2 per user, so that's not possible.
   ##
-  ContainerUserAccessKey:
+  StorageUser:
+    Type: AWS::IAM::User
+    Properties:
+      Groups: !FindInMap [ EnvironmentMap, !Ref Environment, StorageUserGroups ]
+      Policies:
+        - PolicyName: yas3fs
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - s3:AbortMultipartUpload
+                  - s3:DeleteObject
+                  - s3:DeleteObjectVersion
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:ListMultipartUploadParts
+                  - s3:PutObject
+                  - s3:RestoreObject
+                  - s3:ListBucket
+                Effect: Allow
+                Resource:
+                  - !Join [ '', [ 'arn:aws:s3:::', !ImportValue { "Fn::Sub" : "${SharedStack}-StorageBucketName" } ] ]
+                  - !Join [ '', [ 'arn:aws:s3:::', !ImportValue { "Fn::Sub" : "${SharedStack}-StorageBucketName" }, '/*' ] ]
+              - Action:
+                  - sns:ConfirmSubscription
+                  - sns:GetTopicAttributes
+                  - sns:Publish
+                  - sns:Subscribe
+                  - sns:Unsubscribe
+                Effect: Allow
+                Resource: !ImportValue { "Fn::Sub" : "${SharedStack}-SNSTopic" }
+              - Action: sqs:*
+                Effect: Allow
+                Resource: !Join [ '', [ 'arn:aws:sqs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':yas3fs-*' ] ]
+
+  StorageUserAccessKey:
     Type: AWS::IAM::AccessKey
     Properties:
-      UserName: !ImportValue { "Fn::Sub" : "${SharedStack}-StorageUser" }  
+      UserName: !Ref StorageUser              
