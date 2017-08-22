@@ -66,6 +66,10 @@ Parameters:
     Description: "(optional) SSL Certificate ARN to be used with the custom domain name."
     Type: String
     Default: ""
+  SslPolicy:
+    Description: "(optional) SSL Cipher Policy http://docs.aws.amazon.com/elasticloadbalancing/latest/application/create-https-listener.html"
+    Type: String
+    Default: ""
   WpAuthKey:
     Description: "AUTH_KEY for WordPress"
     Type: String
@@ -146,6 +150,7 @@ Conditions:
   SmtpUseStarttls: !Equals [ !Ref SmtpSecurity, "STARTTLS" ]
   UseCustomDomain: !Not [ !Equals [ !Ref CustomDomain, "" ] ]
   UseCustomSSLCertificateArn: !Not [ !Equals [ !Ref CustomSSLCertificateArn, "" ] ]
+  UseSslPolicy: !Not [ !Equals [ !Ref SslPolicy, "" ] ]
   HasSiteIpWhitelist: !Not [ !Equals [ !Ref SiteWhitelistIps, "" ] ]
   DoesNotHaveSiteIpWhitelist: !Equals [ !Ref SiteWhitelistIps, "" ]
   IsActive: !Or
@@ -386,6 +391,7 @@ Resources:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroup
+      SslPolicy: !If [ UseSslPolicy, !Ref SslPolicy, !Ref AWS::NoValue ]
   ##
   # DNS record
   ##
