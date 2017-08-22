@@ -391,7 +391,7 @@ Resources:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroup
-      SslPolicy: !If [ UseSslPolicy, !Ref SslPolicy, !Ref AWS::NoValue ]
+      SslPolicy: !If [ UseSslPolicy, !Ref SslPolicy, !Ref "AWS::NoValue" ]
   ##
   # DNS record
   ##
