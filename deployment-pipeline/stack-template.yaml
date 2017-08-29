@@ -23,6 +23,16 @@ Parameters:
   LambdaS3ObjectKey:
     Description: "S3 key of the zip file to use for lambda deploy function."
     Type: String
+  SlackWebHook:
+    Description: |
+      Slack channel incoming webhook to send approval notifications, check
+      https://api.slack.com/incoming-webhooks
+      If no URL is set, slack notifications will be disabled/not provisioned
+    Default: ''
+    NoEcho: true
+    Type: String
+Conditions:
+  cEnableSlackNotifications: !Not [ !Equals [ !Ref SlackWebHook, ''] ]
 Mappings:
   EnvironmentMap:
     development:
@@ -129,6 +139,7 @@ Resources:
                 Provider: Manual
                 Version: 1
               Configuration:
+                NotificationArn: !Ref ApprovalTopic
                 ExternalEntityLink: !Join [ '', [ 'https://', !Ref AppName, '.', !FindInMap [ EnvironmentMap, 'development', Hostname ] ] ]
                 CustomData: "Deploy from dev to staging?"
               RunOrder: 1
@@ -155,6 +166,7 @@ Resources:
                 Provider: Manual
                 Version: 1
               Configuration:
+                NotificationArn: !Ref ApprovalTopic
                 ExternalEntityLink: !Join [ '', [ 'https://', !Ref AppName, '.', !FindInMap [ EnvironmentMap, 'staging', Hostname ] ] ]
                 CustomData: "Deploy from staging to production?"
               RunOrder: 1
@@ -402,3 +414,451 @@ Resources:
                   - "arn:aws:route53:::hostedzone/Z29SSUU541F3GJ"
                   - "arn:aws:route53:::hostedzone/Z1DKKIUXG25KAH"
                   - "arn:aws:route53:::hostedzone/ZDGHGJRBZZRPF"
+  CodeBuildNotificationsRule:
+    Condition: cEnableSlackNotifications
+    Type: AWS::Events::Rule
+    Properties:
+      Description: Notify subscribers when build steps are finished
+      Name: !Sub ${AppName}-CodeBuildNotificationsRule
+      EventPattern: !Sub |
+        {
+          "source": [
+            "aws.codebuild"
+          ],
+          "detail-type": [
+            "CodeBuild Build State Change"
+          ],
+          "detail": {
+            "build-status": [
+              "FAILED"
+            ],
+            "project-name": [
+              "${CodeBuild}"
+            ]
+          }
+        }
+      State: ENABLED
+      Targets:
+        - Arn: !Ref BuildTopic
+          Id: "codebuild.notifications"
+  BuildTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Sub '${AppName}-build'
+      TopicName: !Sub '${AppName}-build'
+  BuildTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      # http://docs.aws.amazon.com/sns/latest/dg/AccessPolicyLanguage_SpecialInfo.html
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # Allow Pipeline to publish into approvals topic
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - 'sns:Publish'
+            Resource:
+              - !Ref BuildTopic
+      Topics:
+        - !Ref BuildTopic
+  SlackBuildNotificationsApprovalSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: cEnableSlackNotifications
+    Properties:
+      Endpoint: !GetAtt SlackBuildNotificationsLambda.Arn
+      Protocol: lambda
+      TopicArn: !Ref BuildTopic
+  SlackBuildNotificationsLambda:
+    Type: AWS::Lambda::Function
+    Condition: cEnableSlackNotifications
+    Properties:
+      FunctionName: !Sub '${AppName}-slack-build-notifications'
+      Description: |
+        Lambda Function to send build notifications to slack channel
+      Handler: index.handler
+      Role: !GetAtt 'SlackLambdaRole.Arn'
+      Code:
+        # Event example
+        # {
+        #     "Records": [
+        #         {
+        #             "EventSource": "aws:sns",
+        #             "EventVersion": "1.0",
+        #             "EventSubscriptionArn": "arn:aws:sns:eu-west-1:926803513772:intranet-build:683b3c76-142c-408a-a15e-3357a2e711db",
+        #             "Sns": {
+        #                 "Type": "Notification",
+        #                 "MessageId": "f2382ebe-107d-5da7-bbb9-7ca15eb285a7",
+        #                 "TopicArn": "arn:aws:sns:eu-west-1:926803513772:intranet-build",
+        #                 "Subject": null,
+        #                 "Message": "{\"version\":\"0\",\"id\":\"c023b8d9-f080-3818-61f1-903f76029a58\",\"detail-type\":\"CodeBuild Build State Change\",\"source\":\"aws.codebuild\",\"account\":\"926803513772\",\"time\":\"2017-08-29T11:14:20Z\",\"region\":\"eu-west-1\",\"resources\":[\"arn:aws:codebuild:eu-west-1:926803513772:build/intranet:83c9dc59-1253-49b2-8867-ae9fa8852e96\"],\"detail\":{\"build-status\":\"FAILED\",\"project-name\":\"intranet\",\"build-id\":\"arn:aws:codebuild:eu-west-1:926803513772:build/intranet:83c9dc59-1253-49b2-8867-ae9fa8852e96\",\"current-phase\":\"COMPLETED\",\"current-phase-context\":\"[]\",\"version\":\"1\"}}",
+        #                 "Timestamp": "2017-08-29T11:14:23.135Z",
+        #                 "SignatureVersion": "1",
+        #                 "Signature": "EY7PNbkS7hi027PDAhGswMWlUf7j6+eSlQc09e+3FDZK470LPnvZeqka+rW7C1ySlJnNQca0B+vsp+pQ5nwEqIdJ6mcTpFofOdzW6hZ45j0nbZJiWtv0GaXAFXIxQVdIEqexdnCzwp098pk2skg+W2ZwASaPIpZAfP/5l2PURoGrO96KughwdSnJWQW7kdHazAneRFm0ocBMXKlP8Y/igVaYowCpdn49mUUxPnWfYXvGVToNJfsCeHJVomXIKkQ5C/EQAD6F/RVXdKl6OyC/xOs41qOmxEbvA4yzlZBKwf5eeuQegAKPT1/gi48Zx6SMD1JzOCHJCfaOBCfGwKlCBw==",
+        #                 "SigningCertUrl": "https://sns.eu-west-1.amazonaws.com/SimpleNotificationService-433026a4050d206028891664da859041.pem",
+        #                 "UnsubscribeUrl": "https://sns.eu-west-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:eu-west-1:926803513772:intranet-build:683b3c76-142c-408a-a15e-3357a2e711db",
+        #                 "MessageAttributes": {}
+        #             }
+        #         }
+        #     ]
+        # }
+        ZipFile: |
+          'use strict';
+          const AWS = require('aws-sdk');
+          const url = require('url');
+          const https = require('https');
+
+          // The base-64 encoded, encrypted key (CiphertextBlob) stored in the kmsEncryptedHookUrl environment variable
+          // const kmsEncryptedHookUrl = process.env.kmsEncryptedHookUrl;
+          // The Slack channel to send a message to stored in the slackChannel environment variable
+          const slackChannel = process.env.slackChannel;
+          let hookUrl;
+
+          // TODO: Use parameter store
+          hookUrl = process.env.SLACK_WEB_HOOK;
+
+          function postMessage(message, callback) {
+            const body = JSON.stringify(message);
+            const options = url.parse(hookUrl);
+            options.method = 'POST';
+            options.headers = {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(body),
+            };
+
+            const postReq = https.request(options, (res) => {
+              const chunks = [];
+              res.setEncoding('utf8');
+              res.on('data', (chunk) => chunks.push(chunk));
+              res.on('end', () => {
+                if (callback) {
+                  callback({
+                    body: chunks.join(''),
+                    statusCode: res.statusCode,
+                    statusMessage: res.statusMessage,
+                  });
+                }
+              });
+              return res;
+            });
+
+            postReq.write(body);
+            postReq.end();
+          }
+
+          function processBuildEvent(event, callback) {
+            const message = event.Records[0].Sns.Message;
+
+            if (message.version !== "0") {
+                throw new Error(`Build event version [${message.version}] not supported`);
+            }
+
+              const buildID = message.detail["build-id"].split('/', 2)[1];
+
+            const slackMessage = {
+              // "text": `AWS CodeBuild *${message.detail["project-name"]}*`,
+              "attachments": [
+              {
+                  "color": "danger",
+                  "title": `
+          :failed: AWS CodeBuild ${message.detail["project-name"]} ${message.detail["build-status"]} :failed:
+          https://${message.region}.console.aws.amazon.com/codebuild/home?region=${message.region}#/builds/${buildID}/view/new`,
+                }
+              ]
+            }
+
+            postMessage(slackMessage, (response) => {
+              if (response.statusCode < 400) {
+                console.info('Message posted successfully');
+                callback(null);
+              } else if (response.statusCode < 500) {
+                console.error(`Error posting message to Slack API: ${response.statusCode} - ${response.statusMessage}`);
+                callback(null);  // Don't retry because the error is due to a problem with the request
+              } else {
+                // Let Lambda retry
+                callback(`Server error when processing message: ${response.statusCode} - ${response.statusMessage}`);
+              }
+            });
+          }
+
+          const eventHandlerFn = {
+              "aws.codebuild": processBuildEvent,
+          }
+
+          exports.handler = (event, context, callback) => {
+            console.log(JSON.stringify(event, undefined, 2))
+            console.log(JSON.stringify(context, undefined, 2))
+
+            const eventRecord = event.Records[0];
+
+            if (eventRecord.EventVersion !== "1.0") {
+                throw new Error(`The event record version [${eventRecord.EventVersion}] is not suppored`);
+            }
+
+            const message = JSON.parse(eventRecord.Sns.Message);
+            eventRecord.Sns.Message = message;
+
+            return new Promise((resolve, reject) => {
+              if (hookUrl) {
+                return resolve(hookUrl)
+              }
+
+              const ssm = new AWS.SSM()
+              return ssm.getParameters({
+                Names: ['pm.slack.webhooks'],
+                WithDecryption: true
+              }).promise()
+              .then((data) => {
+                hookUrl = data.Parameters[0].Value;
+              })
+              .then(resolve)
+            })
+            .then(() => {
+              if (message.source in eventHandlerFn) {
+                eventHandlerFn[message.source](event, callback);
+              } else {
+                  throw new Error(`There is no event handler for event source [${message.source}]`);
+              }
+            })
+            .catch(callback)
+          };
+      Runtime: nodejs6.10
+      Environment:
+        Variables:
+          SLACK_WEB_HOOK: !Ref SlackWebHook
+      Timeout: 25
+  SlackBuildNotificationsLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Condition: cEnableSlackNotifications
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref SlackBuildNotificationsLambda
+      Principal: !Sub 'sns.amazonaws.com'
+      SourceArn: !Ref BuildTopic
+  ApprovalTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Sub '${AppName}-approvals'
+      TopicName: !Sub '${AppName}-approvals'
+  ApprovalTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      # http://docs.aws.amazon.com/sns/latest/dg/AccessPolicyLanguage_SpecialInfo.html
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # Allow Pipeline to publish into approvals topic
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !Sub '${CodePipelineIAMRole.Arn}'
+            Action:
+              - 'sns:Publish'
+            Resource:
+              - !Ref ApprovalTopic
+      Topics:
+        - !Ref ApprovalTopic
+  SlackLambdaRole:
+    Type: AWS::IAM::Role
+    Condition: cEnableSlackNotifications
+    Properties:
+      RoleName: !Sub '${AppName}-slack-notifications'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Statement:
+              # Create Log streams and write on it
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AppName}-slack-notifications'
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AppName}-slack-notifications:*'
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AppName}-slack-build-notifications'
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${AppName}-slack-build-notifications:*'
+  SlackNotificationsLambda:
+    Type: AWS::Lambda::Function
+    Condition: cEnableSlackNotifications
+    Properties:
+      FunctionName: !Sub '${AppName}-slack-notifications'
+      Description: |
+        Lambda Function to send approvals notifications to slack channel
+      Handler: index.handler
+      Role: !GetAtt 'SlackLambdaRole.Arn'
+      Code:
+        # {
+        #     "Records": [
+        #         {
+        #             "EventSource": "aws:sns",
+        #             "EventVersion": "1.0",
+        #             "EventSubscriptionArn": "arn:aws:sns:eu-west-1:926803513772:intranet-approvals:76f2bea8-9840-4653-8e83-6900d270b2c5",
+        #             "Sns": {
+        #                 "Type": "Notification",
+        #                 "MessageId": "f5c391ef-273f-5da2-856a-c3f055beaa18",
+        #                 "TopicArn": "arn:aws:sns:eu-west-1:926803513772:intranet-approvals",
+        #                 "Subject": "APPROVAL NEEDED: AWS CodePipeline intranet for action ApproveStagingDeploy",
+        #                 "Message": "{\"region\":\"eu-west-1\",\"consoleLink\":\"https://console.aws.amazon.com/codepipeline/home?region=eu-west-1#/view/intranet\",\"approval\":{\"pipelineName\":\"intranet\",\"stageName\":\"DeployStaging\",\"actionName\":\"ApproveStagingDeploy\",\"token\":\"6262f346-b631-40a3-a328-c090d4ecf576\",\"expires\":\"2017-09-05T13:46Z\",\"externalEntityLink\":\"https://intranet.dev.wp.dsd.io\",\"approvalReviewLink\":\"https://console.aws.amazon.com/codepipeline/home?region=eu-west-1#/view/intranet/DeployStaging/ApproveStagingDeploy/approve/6262f346-b631-40a3-a328-c090d4ecf576\",\"customData\":\"Deploy from dev to staging?\"}}",
+        #                 "Timestamp": "2017-08-29T13:46:41.854Z",
+        #                 "SignatureVersion": "1",
+        #                 "Signature": "XO+G8c3EFTAYALEsqVuBnk36UaDp2xTkOSlFF/F/jFNmDCIKWQiUHgKBmUUbycU1WUeF7gU4pynUylCyZqvVDZ8RnJBCtmZi85hHpHQRozGwBZZGuRM/Wz/oQiBDHroIjCqF0TPtQaKvM5+S/5tkrijF47L/roTlsWPsEtfd2teGgRuS1HF5HF1KbpEj0HeEcXldD/8QEPB8Iy6VCmJBkgBOXYYit37RmLuHjFVC6Y7MYCFQZYOhM/Kj27NuXqyyWkM8SSajWiz9fSG5E1nTVkzt9yu/NFWNhAge0/pjoWkrvzyBHhrrJqnL4XSVt+gK8ajEBCX1UZP/bcINYqUImQ==",
+        #                 "SigningCertUrl": "https://sns.eu-west-1.amazonaws.com/SimpleNotificationService-433026a4050d206028891664da859041.pem",
+        #                 "UnsubscribeUrl": "https://sns.eu-west-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:eu-west-1:926803513772:intranet-approvals:76f2bea8-9840-4653-8e83-6900d270b2c5",
+        #                 "MessageAttributes": {}
+        #             }
+        #         }
+        #     ]
+        # }
+        ZipFile: |
+          'use strict';
+          const AWS = require('aws-sdk');
+          const url = require('url');
+          const https = require('https');
+
+          // The base-64 encoded, encrypted key (CiphertextBlob) stored in the kmsEncryptedHookUrl environment variable
+          // const kmsEncryptedHookUrl = process.env.kmsEncryptedHookUrl;
+          // The Slack channel to send a message to stored in the slackChannel environment variable
+          const slackChannel = process.env.slackChannel;
+          let hookUrl;
+
+          // TODO: Use parameter store
+          hookUrl = process.env.SLACK_WEB_HOOK;
+
+          function postMessage(message, callback) {
+            const body = JSON.stringify(message);
+            const options = url.parse(hookUrl);
+            options.method = 'POST';
+            options.headers = {
+              'Content-Type': 'application/json',
+              'Content-Length': Buffer.byteLength(body),
+            };
+
+            const postReq = https.request(options, (res) => {
+              const chunks = [];
+              res.setEncoding('utf8');
+              res.on('data', (chunk) => chunks.push(chunk));
+              res.on('end', () => {
+                if (callback) {
+                  callback({
+                    body: chunks.join(''),
+                    statusCode: res.statusCode,
+                    statusMessage: res.statusMessage,
+                  });
+                }
+              });
+              return res;
+            });
+
+            postReq.write(body);
+            postReq.end();
+          }
+
+          function processEvent(event, callback) {
+            const message = JSON.parse(event.Records[0].Sns.Message);
+
+            const alarmName = message.AlarmName;
+            //var oldState = message.OldStateValue;
+            const newState = message.NewStateValue;
+            const reason = message.NewStateReason;
+
+            const slackMessage = {
+              "text": `Pipeline "${message.approval.pipelineName}" approval required, action "${message.approval.actionName}"`,
+              "attachments": [
+              // {
+              //   "author_name": "Cloud Platform AWS approval",
+              //   "author_icon": "https://i0.wp.com/reillytop10.com/wp-content/uploads/2016/12/Screen-Shot-2016-12-12-at-3.42.49-PM.png",
+              //   "image_url": [
+              //     "https://media.giphy.com/media/3o7abrH8o4HMgEAV9e/giphy.gif",
+              //     "https://media.giphy.com/media/UsmcxQeK7BRBK/giphy.gif",
+              //     "https://media.giphy.com/media/QynHhYJiwfoJO/giphy.gif",
+              //     "https://media.giphy.com/media/Dih5LeyxL8fny/giphy.gif",
+              //   ][Math.floor((Math.random() * 4))]
+              // },
+              {
+                "text": `${message.approval.customData}`,
+                "fields": [
+                {
+                  "title": "Link to approve/reject",
+                  "value": `${message.approval.approvalReviewLink}`,
+                  "short": true,
+                },
+                ]
+              },
+              {
+                "fields": [
+                {
+                  "title": "Pipeline",
+                  "value": `${message.consoleLink}`,
+                  "short": true,
+                },
+                ]
+              }
+              ]
+            }
+
+            postMessage(slackMessage, (response) => {
+              if (response.statusCode < 400) {
+                console.info('Message posted successfully');
+                callback(null);
+              } else if (response.statusCode < 500) {
+                console.error(`Error posting message to Slack API: ${response.statusCode} - ${response.statusMessage}`);
+                callback(null);  // Don't retry because the error is due to a problem with the request
+              } else {
+                // Let Lambda retry
+                callback(`Server error when processing message: ${response.statusCode} - ${response.statusMessage}`);
+              }
+            });
+          }
+
+          exports.handler = (event, context, callback) => {
+            return new Promise((resolve, reject) => {
+              if (hookUrl) {
+                return resolve(hookUrl)
+              }
+
+              const ssm = new AWS.SSM()
+              return ssm.getParameters({
+                Names: ['pm.slack.webhooks'],
+                WithDecryption: true
+              }).promise()
+              .then((data) => {
+                hookUrl = data.Parameters[0].Value;
+              })
+              .then(resolve)
+            })
+            .then(() => {
+              processEvent(event, callback);
+            })
+            .catch(callback)
+          };
+      Runtime: nodejs6.10
+      Environment:
+        Variables:
+          SLACK_WEB_HOOK: !Ref SlackWebHook
+      Timeout: 25
+  SlackNotificationsLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Condition: cEnableSlackNotifications
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref SlackNotificationsLambda
+      Principal: !Sub 'sns.amazonaws.com'
+      SourceArn: !Ref ApprovalTopic
+  SlackNotificationsApprovalSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: cEnableSlackNotifications
+    Properties:
+      Endpoint: !Sub '${SlackNotificationsLambda.Arn}'
+      Protocol: lambda
+      TopicArn: !Ref ApprovalTopic
