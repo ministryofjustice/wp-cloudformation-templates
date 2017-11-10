@@ -109,6 +109,10 @@ Parameters:
     AllowedValues:
       - 'true'
       - 'false'
+  RotateAccessKey:
+    Description: "Increment this number to rotate the IAM access key used by yas3fs when accessing S3. Do not decrement this value."
+    Type: Number
+    Default: 1
 Mappings:
   EnvironmentMap:
     development:
@@ -338,6 +342,7 @@ Resources:
   StorageUserAccessKey:
     Type: AWS::IAM::AccessKey
     Properties:
+      Serial: !Ref RotateAccessKey
       UserName: !Ref StorageUser
   ##
   # Load Balancer
