@@ -254,6 +254,24 @@ Resources:
       Role: ecsServiceRole
       TaskDefinition: !Ref WebTaskDefinition
   ##
+  # Temporary replacement bucket to deal with the broken links problem
+  ##
+  LegacyBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+      BucketName: moj-wp-prod
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: error.html
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: "Delete old backup versions after 30 days"
+            NoncurrentVersionExpirationInDays: 30
+            Status: Enabled
+  ##
   # Uploads storage
   ##
   Storage:
