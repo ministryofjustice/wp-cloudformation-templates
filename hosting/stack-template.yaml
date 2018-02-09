@@ -21,6 +21,12 @@ Parameters:
     Description: "Database password"
     Type: String
     NoEcho: 'true'
+  NewrelicLicense
+    Description: "New Relic API License Key"
+    Type: String
+  NewrelicAppName
+    Description: "Name of the app on New Relic"
+    Type: String
   SmtpHost:
     Description: "SMTP server hostname"
     Type: String
@@ -202,6 +208,11 @@ Resources:
             - Name: DB_USER
               Value: !Ref DbUsername
             - Name: DB_PASSWORD
+              Value: !Ref DbPassword
+            - Name: NEWRELIC_LICENSE
+              Value: !Ref NewrelicLicense
+            - Name: NEWRELIC_APPNAME
+              Value: !Ref NewrelicAppName
               Value: !Ref DbPassword
             - Name: LB_IP_RANGE
               Value: 10.0.0.0/16
