@@ -213,7 +213,6 @@ Resources:
               Value: !Ref NewrelicLicense
             - Name: NEWRELIC_APPNAME
               Value: !Ref NewrelicAppName
-              Value: !Ref DbPassword
             - Name: LB_IP_RANGE
               Value: 10.0.0.0/16
             - Name: LOGIN_WHITELIST_IPS
