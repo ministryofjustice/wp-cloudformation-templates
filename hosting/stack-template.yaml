@@ -21,10 +21,10 @@ Parameters:
     Description: "Database password"
     Type: String
     NoEcho: 'true'
-  NewrelicLicense
+  NewrelicLicense:
     Description: "New Relic API License Key"
     Type: String
-  NewrelicAppName
+  NewrelicAppName:
     Description: "Name of the app on New Relic"
     Type: String
   SmtpHost:
