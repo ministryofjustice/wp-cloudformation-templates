@@ -24,9 +24,11 @@ Parameters:
   NewrelicLicense:
     Description: "New Relic API License Key"
     Type: String
+    Default: 'deadbeef'
   NewrelicAppName:
     Description: "Name of the app on New Relic"
     Type: String
+    Default: 'N/A'
   SmtpHost:
     Description: "SMTP server hostname"
     Type: String
