@@ -5,6 +5,10 @@ Parameters:
     Type: String
     AllowedPattern: "[a-z0-9-]+"
     ConstraintDescription: "must only contain lowercase letters, numbers and hyphens"
+  DesiredCount:
+    Description: "Desired number of running containers"
+    Type: String
+    Default: "2"
   DockerImage:
     Description: "Docker image to use (including tag)"
     Type: String
@@ -267,7 +271,7 @@ Resources:
       - HttpListener
     Properties:
       Cluster: !FindInMap [ EnvironmentMap, !Ref Environment, ECSCluster ]
-      DesiredCount: '2'
+      DesiredCount: !Ref DesiredCount
       LoadBalancers:
         - ContainerName: web
           ContainerPort: '80'
