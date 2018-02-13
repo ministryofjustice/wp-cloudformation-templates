@@ -25,6 +25,14 @@ Parameters:
     Description: "Database password"
     Type: String
     NoEcho: 'true'
+  Memory:
+    Description: "Max allocated memory for a container"
+    Type: Number
+    Default: 1000
+  MemoryReservation:
+    Description: "Runtime memory for a container"
+    Type: Number
+    Default: 300
   NewrelicLicense:
     Description: "New Relic API License Key"
     Type: String
@@ -185,8 +193,8 @@ Resources:
         - Name: web
           Essential: 'true'
           Image: !Ref DockerImage
-          Memory: 1000
-          MemoryReservation: 300
+          Memory: !Ref Memory
+          MemoryReservation: !Ref MemoryReservation
           Privileged: 'true'
           PortMappings:
             - ContainerPort: 80
