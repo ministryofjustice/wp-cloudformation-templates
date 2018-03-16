@@ -5,6 +5,13 @@ read APP_NAME
 echo "What is the repo name?"
 read REPO_NAME
 
+echo "Which branch should I deploy from? (leave blank for master)"
+read REPO_BRANCH
+if [ -z "$REPO_BRANCH" ]
+then
+	REPO_BRANCH="master"
+fi
+
 echo "What is your GitHub access token?"
 echo "If you don't have one, go to https://github.com/settings/tokens"
 read GITHUB_TOKEN
@@ -19,6 +26,7 @@ echo "Just to confirm:"
 echo
 echo "App name: $APP_NAME"
 echo "Repo name: $REPO_NAME"
+echo "Repo branch: $REPO_BRANCH"
 echo "GitHub token: $GITHUB_TOKEN"
 echo "Composer username: $COMPOSER_USER"
 echo "Composer password: $COMPOSER_PASSWORD"
@@ -49,6 +57,7 @@ cd ..
 STACK_NAME="$APP_NAME-deploy"
 PARAMS="ParameterKey=AppName,ParameterValue=$APP_NAME"
 PARAMS="$PARAMS ParameterKey=RepoName,ParameterValue=$REPO_NAME"
+PARAMS="$PARAMS ParameterKey=RepoBranch,ParameterValue=$REPO_BRANCH"
 PARAMS="$PARAMS ParameterKey=GitHubToken,ParameterValue=$GITHUB_TOKEN"
 PARAMS="$PARAMS ParameterKey=ComposerUser,ParameterValue=$COMPOSER_USER"
 PARAMS="$PARAMS ParameterKey=ComposerPassword,ParameterValue=$COMPOSER_PASSWORD"

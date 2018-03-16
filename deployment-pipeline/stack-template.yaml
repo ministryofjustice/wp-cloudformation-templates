@@ -10,6 +10,12 @@ Parameters:
     Type: String
     AllowedPattern: "[A-Za-z0-9-]+"
     ConstraintDescription: "must only contain letters, numbers and hyphens"
+  RepoBranch:
+    Description: "Name of the branch to use in the GitHub repository"
+    Type: String
+    AllowedPattern: "[A-Za-z0-9-]+"
+    Default: "master"
+    ConstraintDescription: "must only contain letters, numbers and hyphens"
   GitHubToken:
     Description: "Access token for the GitHub API"
     Type: String
@@ -58,7 +64,7 @@ Resources:
               Configuration:
                 Owner: ministryofjustice
                 Repo: !Ref RepoName
-                Branch: master
+                Branch: !Ref RepoBranch
                 OAuthToken: !Ref GitHubToken
               RunOrder: 1
               OutputArtifacts:
