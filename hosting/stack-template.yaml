@@ -133,6 +133,14 @@ Parameters:
     Description: "Increment this number to rotate the IAM access key used by yas3fs when accessing S3. Do not decrement this value."
     Type: Number
     Default: 1
+  MaintenanceMode:
+    Description: "Sets the MAINTNANCE_MODE environment variable on the container. If implemented by the container, setting to 1 will cause a maintenance page to be displayed."
+    Type: Number
+    Default: 0
+  MaintenanceWhitelistIps:
+    Description: "Use in conjunction with MaintenanceMode parameter to configure a whitelist of IP addresses which can bypass the maintenance page. Sets the MAINTENANCE_WHITELIST_IPS environment variable on the container."
+    Type: String
+    Default: ""
 Mappings:
   EnvironmentMap:
     development:
@@ -269,6 +277,10 @@ Resources:
               Value: !Ref WpLoggedInSalt
             - Name: NONCE_SALT
               Value: !Ref WpNonceSalt
+            - Name: MAINTNANCE_MODE
+              Value: !Ref MaintenanceMode
+            - Name: MAINTENANCE_WHITELIST_IPS
+              Value: !Ref MaintenanceWhitelistIps
       Family: !Ref AWS::StackName
   WebService:
     Condition: IsActive
