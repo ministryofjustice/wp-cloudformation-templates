@@ -134,7 +134,7 @@ Parameters:
     Type: Number
     Default: 1
   MaintenanceMode:
-    Description: "Sets the MAINTNANCE_MODE environment variable on the container. If implemented by the container, setting to 1 will cause a maintenance page to be displayed."
+    Description: "Sets the MAINTENANCE_MODE environment variable on the container. If implemented by the container, setting to 1 will cause a maintenance page to be displayed."
     Type: Number
     Default: 0
   MaintenanceWhitelistIps:
@@ -277,7 +277,7 @@ Resources:
               Value: !Ref WpLoggedInSalt
             - Name: NONCE_SALT
               Value: !Ref WpNonceSalt
-            - Name: MAINTNANCE_MODE
+            - Name: MAINTENANCE_MODE
               Value: !Ref MaintenanceMode
             - Name: MAINTENANCE_WHITELIST_IPS
               Value: !Ref MaintenanceWhitelistIps
