@@ -196,6 +196,8 @@ Resources:
             Value: !Ref ComposerUser
           - Name: COMPOSER_PASS
             Value: !Ref ComposerPassword
+          - Name: APPNAME
+            Value: !Ref AppName
       ServiceRole: !GetAtt CodeBuildIAMRole.Arn
       Source:
         Type: CODEPIPELINE
