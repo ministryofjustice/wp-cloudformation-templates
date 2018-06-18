@@ -247,6 +247,8 @@ Resources:
               Value: !If [ UseCustomDomain, !Ref CustomDomain, !Join [ '', [ !Ref AppName, '.', !FindInMap [ EnvironmentMap, !Ref Environment, Hostname ] ] ] ]
             - Name: SMTP_HOST
               Value: !Ref SmtpHost
+            - Name: SMTP_PORT
+              Value: !Ref SmtpPort
             - Name: SMTP_USER
               Value: !Ref SmtpUsername
             - Name: SMTP_PASS
