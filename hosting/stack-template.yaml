@@ -146,7 +146,6 @@ Mappings:
     development:
       HostedZone: dev.wp.dsd.io.
       Hostname: dev.wp.dsd.io
-      AWSLogGroup: wp-dev
       ECSCluster: wp-dev
       SSLCertificateArn:  arn:aws:acm:eu-west-2:613903586696:certificate/006ac123-c8b7-4f47-ac49-2dcbc6c6bd45
       ELBSubnet1: subnet-0378637b
@@ -156,7 +155,6 @@ Mappings:
     staging:
       HostedZone: staging.wp.dsd.io.
       Hostname: staging.wp.dsd.io
-      AWSLogGroup: wp-staging
       ECSCluster: wp-staging
       SSLCertificateArn:  arn:aws:acm:eu-west-2:613903586696:certificate/9b35290e-dd85-4a10-b084-956c187ca6cd
       ELBSubnet1: subnet-5d7f6425
@@ -166,7 +164,6 @@ Mappings:
     production:
       HostedZone: prod.wp.dsd.io.
       Hostname: prod.wp.dsd.io
-      AWSLogGroup: wp-production
       ECSCluster: wp-production
       SSLCertificateArn:  arn:aws:acm:eu-west-2:613903586696:certificate/3a60a3f5-a250-42d3-8af0-ae24bfee13eb
       ELBSubnet1: subnet-297f6451
@@ -209,7 +206,7 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !FindInMap [ EnvironmentMap, !Ref Environment, AWSLogGroup ]
+              awslogs-group: !Ref LogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: !Ref AppName
           Environment:
@@ -300,6 +297,15 @@ Resources:
           TargetGroupArn: !Ref TargetGroup
       Role: ecsServiceRole
       TaskDefinition: !Ref WebTaskDefinition
+  ##
+  # Log group
+  ##
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !AWS::StackName
+      RetentionInDays: 30
+
   ##
   # Uploads storage
   ##
