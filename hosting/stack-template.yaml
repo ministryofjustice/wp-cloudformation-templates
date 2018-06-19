@@ -303,7 +303,7 @@ Resources:
   LogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !AWS::StackName
+      LogGroupName: !Ref AWS::StackName
       RetentionInDays: 30
 
   ##
