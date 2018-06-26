@@ -410,3 +410,15 @@ Resources:
                   - "arn:aws:route53:::hostedzone/Z29SSUU541F3GJ"
                   - "arn:aws:route53:::hostedzone/Z1DKKIUXG25KAH"
                   - "arn:aws:route53:::hostedzone/ZDGHGJRBZZRPF"
+              - Action:
+                  - "logs:DescribeLogGroups"
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:PutRetentionPolicy"
+                Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:logs:eu-west-2:${AWS::AccountId}:log-group:${AppName}-dev:*'
+                  - !Sub 'arn:aws:logs:eu-west-2:${AWS::AccountId}:log-group:${AppName}-staging:*'
+                  - !Sub 'arn:aws:logs:eu-west-2:${AWS::AccountId}:log-group:${AppName}-prod:*'
