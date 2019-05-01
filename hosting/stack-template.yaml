@@ -165,7 +165,7 @@ Mappings:
       HostedZone: prod.wp.dsd.io.
       Hostname: prod.wp.dsd.io
       ECSCluster: wp-production
-      SSLCertificateArn:  arn:aws:acm:eu-west-2:613903586696:certificate/3a60a3f5-a250-42d3-8af0-ae24bfee13eb
+      SSLCertificateArn:  arn:aws:acm:eu-west-2:613903586696:certificate/b4ab3e48-efbe-46c2-a77c-f52f0e83e4e8
       ELBSubnet1: subnet-297f6451
       ELBSubnet2: subnet-29f4c863
       ELBSecurityGroup: sg-d66b93bf
