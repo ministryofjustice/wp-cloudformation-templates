@@ -1,2 +1,4 @@
 expect.sh
 *.zip
+.idea
+.DS_*
