@@ -69,12 +69,12 @@ then
 	echo "Updating CloudFormation stack"
 	aws cloudformation update-stack --template-body "file://$PWD/stack-template.yaml" --parameters $PARAMS --stack-name "$STACK_NAME" --capabilities CAPABILITY_NAMED_IAM > /dev/null
 	echo -n "In progress... "
-	aws cloudformation wait stack-update-complete --stack-name "$STACK_NAME"
+	aws cloudformation wait stack-update-complete --stack-name="$STACK_NAME"
 else
 	echo "Creating CloudFormation stack"
 	aws cloudformation create-stack --template-body "file://$PWD/stack-template.yaml" --parameters $PARAMS --stack-name "$STACK_NAME" --capabilities CAPABILITY_NAMED_IAM > /dev/null
 	echo -n "In progress... "
-	aws cloudformation wait stack-create-complete --stack-name "$STACK_NAME"
+	aws cloudformation wait stack-create-complete --stack-name="$STACK_NAME"
 fi
 
 # Clear up after ourselves

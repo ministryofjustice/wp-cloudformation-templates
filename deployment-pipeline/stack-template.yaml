@@ -214,7 +214,7 @@ Resources:
         S3Key: !Ref LambdaS3ObjectKey
       Handler: index.handler
       Role: !GetAtt DeployLambdaIAMRole.Arn
-      Runtime: nodejs6.10
+      Runtime: nodejs8.10
       Timeout: 20
   CodePipelineIAMRole:
     Type: AWS::IAM::Role
