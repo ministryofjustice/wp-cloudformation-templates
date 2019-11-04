@@ -13,3 +13,5 @@ Delete the stack:
 ```
 aws cloudformation delete-stack --stack-name $NAME
 ```
+
+Use Node version > 6.10
