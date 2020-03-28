@@ -141,6 +141,10 @@ Parameters:
     Description: "Use in conjunction with MaintenanceMode parameter to configure a whitelist of IP addresses which can bypass the maintenance page. Sets the MAINTENANCE_WHITELIST_IPS environment variable on the container."
     Type: String
     Default: ""
+  S3SignUrls:
+    Description: Used with the wp-rewrite-media-to-s3 plugin
+    Type: String
+    Default: 'false'
 Mappings:
   EnvironmentMap:
     development:
