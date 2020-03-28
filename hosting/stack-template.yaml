@@ -105,6 +105,10 @@ Parameters:
     AllowedValues:
       - 'true'
       - 'false'
+  S3SignUrls:
+    Description: Used with the wp-rewrite-media-to-s3 plugin
+    Type: String
+    Default: 'false'
 Mappings:
   EnvironmentMap:
     development:
