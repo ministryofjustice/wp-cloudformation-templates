@@ -284,6 +284,8 @@ Resources:
               Value: !Ref MaintenanceMode
             - Name: MAINTENANCE_WHITELIST_IPS
               Value: !Ref MaintenanceWhitelistIps
+            - Name: S3SignUrls
+              Value: !Ref S3SignUrls
       Family: !Ref AWS::StackName
   WebService:
     Condition: IsActive
