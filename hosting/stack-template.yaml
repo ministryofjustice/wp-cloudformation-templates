@@ -141,10 +141,18 @@ Parameters:
     Description: "Use in conjunction with MaintenanceMode parameter to configure a whitelist of IP addresses which can bypass the maintenance page. Sets the MAINTENANCE_WHITELIST_IPS environment variable on the container."
     Type: String
     Default: ""
-  S3SignUrls:
-    Description: Used with the wp-rewrite-media-to-s3 plugin
+  WpmsSaEmail:
+    Description: "For use in WP multi-site: super admin email address"
     Type: String
-    Default: 'false'
+    Default: ""
+  WpmsSaUsername:
+    Description: "For use in WP multi-site: super admin username"
+    Type: String
+    Default: ""
+  WpmsSaPassword:
+    Description: "For use in WP multi-site: super admin password"
+    Type: String
+    Default: ""
 Mappings:
   EnvironmentMap:
     development:
@@ -284,8 +292,12 @@ Resources:
               Value: !Ref MaintenanceMode
             - Name: MAINTENANCE_WHITELIST_IPS
               Value: !Ref MaintenanceWhitelistIps
-            - Name: S3SignUrls
-              Value: !Ref S3SignUrls
+            - Name: WPMS_SA_EMAIL
+              Value: !Ref WpmsSaEmail
+            - Name: WPMS_SA_USERNAME
+              Value: !Ref WpmsSaUsername
+            - Name: WPMS_SA_PASSWORD
+              Value: !Ref WpmsSaPassword
       Family: !Ref AWS::StackName
   WebService:
     Condition: IsActive
