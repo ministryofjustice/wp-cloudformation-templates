@@ -5,6 +5,14 @@ Parameters:
     Type: String
     AllowedPattern: "[a-z0-9-]+"
     ConstraintDescription: "must only contain lowercase letters, numbers and hyphens"
+  AppKey:
+    Description: "Laravel param: Random 32 character string"
+    Type: String
+    Default: ""
+  AppDebug:
+    Description: "Laravel param: Debug on (1) or off (0)"
+    Type: Number
+    Default: 0
   DesiredCount:
     Description: "Desired number of running containers"
     Type: String
@@ -153,6 +161,50 @@ Parameters:
     Description: "For use in WP multi-site: super admin password"
     Type: String
     Default: ""
+  SentryDsn:
+    Description: "Access Sentry services - the dsn url endpoint"
+    Type: String
+    Default: ""
+  SentryTracesSampleRate:
+    Description: "Sentry services - the traces sample rate"
+    Type: String
+    Default: 0.0
+  PusherAppId:
+    Description: "Laravel param: Pusher service cred - application id"
+    Type: String
+    Default: ""
+  PusherAppKey:
+    Description: "Laravel param: Pusher service cred - application key"
+    Type: String
+    Default: ""
+  PusherAppSecret:
+    Description: "Laravel param: Pusher service cred - application secret"
+    Type: String
+    Default: ""
+  PusherAppCluster:
+    Description: "Laravel param: Pusher service cred - cluster"
+    Type: String
+    Default: ""
+  BroadcastDriver:
+    Description: "Laravel param: config/broadcasting.php"
+    Type: String
+    Default: "null"
+  CacheDriver:
+    Description: "Laravel param: config/cache.php"
+    Type: String
+    Default: "database"
+  QueueConnection:
+    Description: "Laravel param: config/queue.php"
+    Type: String
+    Default: "sync"
+  SessionDriver:
+    Description: "Laravel param: config/session.php"
+    Type: String
+    Default: "database"
+  SessionLifetime:
+    Description: "Laravel param: config/session.php"
+    Type: Number
+    Default: 120
 Mappings:
   EnvironmentMap:
     development:
@@ -238,6 +290,10 @@ Resources:
               Value: !Ref DbName
             - Name: DB_USER
               Value: !Ref DbUsername
+            - Name: DB_DATABASE
+              Value: !Ref DbName
+            - Name: DB_USERNAME
+              Value: !Ref DbUsername
             - Name: DB_PASSWORD
               Value: !Ref DbPassword
             - Name: NEWRELIC_LICENSE
@@ -298,6 +354,52 @@ Resources:
               Value: !Ref WpmsSaUsername
             - Name: WPMS_SA_PASSWORD
               Value: !Ref WpmsSaPassword
+            - Name: PUSHER_APP_ID
+              Value: !Ref PusherAppId
+            - Name: PUSHER_APP_KEY
+              Value: !Ref PusherAppKey
+            - Name: PUSHER_APP_SECRET
+              Value: !Ref PusherAppSecret
+            - Name: PUSHER_APP_CLUSTER
+              Value: !Ref PusherAppCluster
+            - Name: MIX_PUSHER_APP_KEY
+              Value: !Ref PusherAppKey
+            - Name: MIX_PUSHER_APP_CLUSTER
+              Value: !Ref PusherAppCluster
+            - Name: APP_KEY
+              Value: !Ref AppKey
+            - Name: APP_DEBUG
+              Value: !Ref AppDebug
+            - Name: APP_ENV
+              Value: !Ref Environment
+            - Name: APP_URL
+              Value: !Join [ '', [ 'https://', !If [ UseCustomDomain, !Ref CustomDomain, !Join [ '', [ !Ref AppName, '.', !FindInMap [ EnvironmentMap, !Ref Environment, Hostname ] ] ] ] ] ]
+            - Name: BROADCAST_DRIVER
+              Value: !Ref BroadcastDriver
+            - Name: CACHE_DRIVER
+              Value: !Ref CacheDriver
+            - Name: QUEUE_CONNECTION
+              Value: !Ref QueueConnection
+            - Name: SESSION_DRIVER
+              Value: !Ref SessionDriver
+            - Name: SESSION_LIFETIME
+              Value: !Ref SessionLifetime
+            - Name: MAIL_HOST
+              Value: !Ref SmtpHost
+            - Name: MAIL_PORT
+              Value: !Ref SmtpPort
+            - Name: MAIL_USERNAME
+              Value: !Ref SmtpUsername
+            - Name: MAIL_PASSWORD
+              Value: !Ref SmtpPassword
+            - Name: MAIL_FROM_NAME
+              Value: !Ref AppName
+            - Name: SENTRY_DSN
+              Value: !Ref SentryDsn
+            - Name: SENTRY_TRACES_SAMPLE_RATE
+              Value: !Ref SentryTracesSampleRate
+            - Name: SENTRY_ENVIRONMENT
+              Value: !Ref Environment
       Family: !Ref AWS::StackName
   WebService:
     Condition: IsActive
