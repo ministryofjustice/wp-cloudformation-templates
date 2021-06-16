@@ -198,6 +198,12 @@ Resources:
             Value: !Ref ComposerPassword
           - Name: APPNAME
             Value: !Ref AppName
+          - Name: DOCKERUSERNAME
+            Type: SECRETS_MANAGER
+            Value: JOTWOC/DockerHub:USERNAME
+          - Name: DOCKERPASSWORD
+            Type: SECRETS_MANAGER
+            Value: JOTWOC/DockerHub:PASSWORD
       ServiceRole: !GetAtt CodeBuildIAMRole.Arn
       Source:
         Type: CODEPIPELINE
@@ -272,6 +278,19 @@ Resources:
               Service:
                 - "codebuild.amazonaws.com"
       Policies:
+        - PolicyName: SecretsManager
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - secretsmanager:GetResourcePolicy
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+              - secretsmanager:ListSecretVersionIds
+              - secretsmanager:ListSecrets
+              Resource:
+              - arn:aws:secretsmanager:eu-west-1:613903586696:secret:JOTWOC/DockerHub-lmzZzj
         - PolicyName: Policy
           PolicyDocument:
             Version: "2012-10-17"
