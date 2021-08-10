@@ -259,6 +259,30 @@ Resources:
       - StorageUserAccessKey
     Properties:
       ContainerDefinitions:
+        - Name: xray-agent
+          Essential: true
+          Image: amazon/aws-xray-daemon
+          Cpu: 32
+          Command:
+            - --log-level=dev
+          Memory: 64
+          PortMappings:
+            - ContainerPort: 2000
+              HostPort: 0
+              Protocol: udp
+          Environment:
+            - Name: AWS_DEFAULT_REGION
+              Value: !Ref "AWS::Region"
+            - Name: AWS_REGION
+              Value: eu-west-2
+            - Name: AWS_SDK_LOAD_CONFIG
+              Value: "1"
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref AWS::StackName
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: "xray-agent"
         - Name: web
           Essential: 'true'
           Image: !Ref DockerImage
