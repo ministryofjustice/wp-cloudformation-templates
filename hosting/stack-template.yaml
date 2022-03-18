@@ -211,7 +211,7 @@ Mappings:
       HostedZone: dev.wp.dsd.io.
       Hostname: dev.wp.dsd.io
       ECSCluster: wp-dev
-      SSLCertificateArn:  arn:aws:acm:eu-west-2:613903586696:certificate/006ac123-c8b7-4f47-ac49-2dcbc6c6bd45
+      SSLCertificateArn: arn:aws:acm:eu-west-2:613903586696:certificate/e477b037-7cd7-4af3-be67-54d0ddd385a6
       ELBSubnet1: subnet-0378637b
       ELBSubnet2: subnet-c1fbc78b
       ELBSecurityGroup: sg-d86b93b1
