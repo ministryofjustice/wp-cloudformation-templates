@@ -220,7 +220,7 @@ Mappings:
       HostedZone: staging.wp.dsd.io.
       Hostname: staging.wp.dsd.io
       ECSCluster: wp-staging
-      SSLCertificateArn:  arn:aws:acm:eu-west-2:613903586696:certificate/9b35290e-dd85-4a10-b084-956c187ca6cd
+      SSLCertificateArn: arn:aws:acm:eu-west-2:613903586696:certificate/95f47be5-9ba5-4af8-9a2e-fd2933bf71a0
       ELBSubnet1: subnet-5d7f6425
       ELBSubnet2: subnet-7ff4c835
       ELBSecurityGroup: sg-986b93f1
