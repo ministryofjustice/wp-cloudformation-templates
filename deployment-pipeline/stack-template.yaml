@@ -20,12 +20,6 @@ Parameters:
     Description: "Access token for the GitHub API"
     Type: String
     NoEcho: 'true'
-  ComposerUser:
-    Description: "Username for the repository composer.wp.dsd.io"
-    Type: String
-  ComposerPassword:
-    Description: "Password for the repository composer.wp.dsd.io"
-    Type: String
   LambdaS3ObjectKey:
     Description: "S3 key of the zip file to use for lambda deploy function."
     Type: String
@@ -78,7 +72,7 @@ Resources:
               Configuration:
                 Owner: ministryofjustice
                 Repo: wp-cloudformation-templates
-                Branch: master
+                Branch: cdpt-redirect-service
                 OAuthToken: !Ref GitHubToken
               RunOrder: 1
               OutputArtifacts:
@@ -184,7 +178,7 @@ Resources:
       - CodeBuildIAMRole
     Properties:
       Name: !Ref AppName
-      Description: !Join [ '', [ 'Project to build the WordPress application ', !Ref AppName ] ]
+      Description: !Join [ '', [ 'Project to build the redirect service ', !Ref AppName ] ]
       Artifacts:
         Type: CODEPIPELINE
       Environment:
@@ -192,10 +186,6 @@ Resources:
         Image: aws/codebuild/docker:1.12.1
         Type: LINUX_CONTAINER
         EnvironmentVariables:
-          - Name: COMPOSER_USER
-            Value: !Ref ComposerUser
-          - Name: COMPOSER_PASS
-            Value: !Ref ComposerPassword
           - Name: APPNAME
             Value: !Ref AppName
       ServiceRole: !GetAtt CodeBuildIAMRole.Arn
@@ -208,13 +198,13 @@ Resources:
       - DeployLambdaIAMRole
     Properties:
       FunctionName: !Join [ '', [ !Ref AppName, '-deploy' ] ]
-      Description: !Join [ '', [ 'Function to deploy the WordPress application ', !Ref AppName ] ]
+      Description: !Join [ '', [ 'Function to deploy the redirect service ', !Ref AppName ] ]
       Code:
         S3Bucket: codepipeline-eu-west-1-339248251867
         S3Key: !Ref LambdaS3ObjectKey
       Handler: index.handler
       Role: !GetAtt DeployLambdaIAMRole.Arn
-      Runtime: nodejs12.x
+      Runtime: nodejs18.x
       Timeout: 20
   CodePipelineIAMRole:
     Type: AWS::IAM::Role
@@ -311,8 +301,12 @@ Resources:
                   - "ecr:CompleteLayerUpload"
                   - "ecr:PutImage"
                 Effect: Allow
-                Resource: !Join [ '', [ 'arn:aws:ecr:eu-west-2:', !Ref 'AWS::AccountId', ':repository/wp/', !Ref AppName ] ]
+                Resource: !Join [ '', [ 'arn:aws:ecr:eu-west-2:', !Ref 'AWS::AccountId', ':repository/cdpt/', !Ref AppName ] ]
               - Action: "ecr:GetAuthorizationToken"
+                Effect: Allow
+                Resource: "*"
+              - Action:
+                  - "secretsmanager:*"
                 Effect: Allow
                 Resource: "*"
   DeployLambdaIAMRole:

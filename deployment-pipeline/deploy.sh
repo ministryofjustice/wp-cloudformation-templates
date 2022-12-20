@@ -16,20 +16,12 @@ echo "What is your GitHub access token?"
 echo "If you don't have one, go to https://github.com/settings/tokens"
 read GITHUB_TOKEN
 
-echo "What is the username for composer.wp.dsd.io?"
-read COMPOSER_USER
-
-echo "What is the password for composer.wp.dsd.io?"
-read COMPOSER_PASSWORD
-
 echo "Just to confirm:"
 echo
 echo "App name: $APP_NAME"
 echo "Repo name: $REPO_NAME"
 echo "Repo branch: $REPO_BRANCH"
 echo "GitHub token: $GITHUB_TOKEN"
-echo "Composer username: $COMPOSER_USER"
-echo "Composer password: $COMPOSER_PASSWORD"
 echo
 echo "This script will now setup the deployment pipeline using CloudFormation."
 echo "Continue? [y/N]"
@@ -59,8 +51,6 @@ PARAMS="ParameterKey=AppName,ParameterValue=$APP_NAME"
 PARAMS="$PARAMS ParameterKey=RepoName,ParameterValue=$REPO_NAME"
 PARAMS="$PARAMS ParameterKey=RepoBranch,ParameterValue=$REPO_BRANCH"
 PARAMS="$PARAMS ParameterKey=GitHubToken,ParameterValue=$GITHUB_TOKEN"
-PARAMS="$PARAMS ParameterKey=ComposerUser,ParameterValue=$COMPOSER_USER"
-PARAMS="$PARAMS ParameterKey=ComposerPassword,ParameterValue=$COMPOSER_PASSWORD"
 PARAMS="$PARAMS ParameterKey=LambdaS3ObjectKey,ParameterValue=$LAMBDA_S3_OBJECT_KEY"
 
 aws cloudformation describe-stacks --stack-name "$STACK_NAME" > /dev/null 2>&1
