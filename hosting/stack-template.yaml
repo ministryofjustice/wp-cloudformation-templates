@@ -5,14 +5,6 @@ Parameters:
     Type: String
     AllowedPattern: "[a-z0-9-]+"
     ConstraintDescription: "must only contain lowercase letters, numbers and hyphens"
-  AppKey:
-    Description: "Laravel param: Random 32 character string"
-    Type: String
-    Default: ""
-  AppDebug:
-    Description: "Laravel param: Debug on (1) or off (0)"
-    Type: Number
-    Default: 0
   DesiredCount:
     Description: "Desired number of running containers"
     Type: String
@@ -20,19 +12,6 @@ Parameters:
   DockerImage:
     Description: "Docker image to use (including tag)"
     Type: String
-  DbHost:
-    Description: "Database server hostname"
-    Type: String
-  DbName:
-    Description: "Name of the database"
-    Type: String
-  DbUsername:
-    Description: "Database username"
-    Type: String
-  DbPassword:
-    Description: "Database password"
-    Type: String
-    NoEcho: 'true'
   Memory:
     Description: "Max allocated memory for a container"
     Type: Number
@@ -41,43 +20,6 @@ Parameters:
     Description: "Runtime memory for a container"
     Type: Number
     Default: 300
-  NewrelicLicense:
-    Description: "New Relic API License Key"
-    Type: String
-    Default: 'deadbeef'
-  NewrelicAppName:
-    Description: "Name of the app on New Relic"
-    Type: String
-    Default: 'N/A'
-  SmtpHost:
-    Description: "SMTP server hostname"
-    Type: String
-  SmtpPort:
-    Description: "SMTP port"
-    Type: Number
-    Default: '25'
-  SmtpUsername:
-    Description: "SMTP username"
-    Type: String
-  SmtpPassword:
-    Description: "SMTP password"
-    Type: String
-    NoEcho: 'true'
-  SmtpSecurity:
-    Description: "SMTP security type"
-    Type: String
-    AllowedValues:
-      - None
-      - SSL
-      - STARTTLS
-  LoginWhitelistIps:
-    Description: "A comma-separated list of IP addresses that should be allowed to access the WordPress login page."
-    Type: String
-    Default: ""
-  SiteWhitelistIps:
-    Description: "(optional) A comma-separated list of IP addresses to whitelist the entire website."
-    Type: String
-    Default: ""
   Environment:
     Description: "The environment this application should run in."
     Type: String
@@ -98,38 +40,6 @@ Parameters:
     Description: "(optional) SSL Cipher Policy http://docs.aws.amazon.com/elasticloadbalancing/latest/application/create-https-listener.html"
     Type: String
     Default: ""
-  WpAuthKey:
-    Description: "AUTH_KEY for WordPress"
-    Type: String
-    NoEcho: 'true'
-  WpSecureAuthKey:
-    Description: "SECURE_AUTH_KEY for WordPress"
-    Type: String
-    NoEcho: 'true'
-  WpLoggedInKey:
-    Description: "LOGGED_IN_KEY for WordPress"
-    Type: String
-    NoEcho: 'true'
-  WpNonceKey:
-    Description: "NONCE_KEY for WordPress"
-    Type: String
-    NoEcho: 'true'
-  WpAuthSalt:
-    Description: "AUTH_SALT for WordPress"
-    Type: String
-    NoEcho: 'true'
-  WpSecureAuthSalt:
-    Description: "SECURE_AUTH_SALT for WordPress"
-    Type: String
-    NoEcho: 'true'
-  WpLoggedInSalt:
-    Description: "LOGGED_IN_SALT for WordPress"
-    Type: String
-    NoEcho: 'true'
-  WpNonceSalt:
-    Description: "NONCE_SALT for WordPress"
-    Type: String
-    NoEcho: 'true'
   Active:
     Description: "If the service is 'turned on'. Off services will retain data but will not have containers/load balancers."
     Type: String
@@ -137,74 +47,6 @@ Parameters:
     AllowedValues:
       - 'true'
       - 'false'
-  RotateAccessKey:
-    Description: "Increment this number to rotate the IAM access key used by yas3fs when accessing S3. Do not decrement this value."
-    Type: Number
-    Default: 1
-  MaintenanceMode:
-    Description: "Sets the MAINTENANCE_MODE environment variable on the container. If implemented by the container, setting to 1 will cause a maintenance page to be displayed."
-    Type: Number
-    Default: 0
-  MaintenanceWhitelistIps:
-    Description: "Use in conjunction with MaintenanceMode parameter to configure a whitelist of IP addresses which can bypass the maintenance page. Sets the MAINTENANCE_WHITELIST_IPS environment variable on the container."
-    Type: String
-    Default: ""
-  WpmsSaEmail:
-    Description: "For use in WP multi-site: super admin email address"
-    Type: String
-    Default: ""
-  WpmsSaUsername:
-    Description: "For use in WP multi-site: super admin username"
-    Type: String
-    Default: ""
-  WpmsSaPassword:
-    Description: "For use in WP multi-site: super admin password"
-    Type: String
-    Default: ""
-  SentryDsn:
-    Description: "Access Sentry services - the dsn url endpoint"
-    Type: String
-    Default: ""
-  SentryTracesSampleRate:
-    Description: "Sentry services - the traces sample rate"
-    Type: String
-    Default: 0.0
-  PusherAppId:
-    Description: "Laravel param: Pusher service cred - application id"
-    Type: String
-    Default: ""
-  PusherAppKey:
-    Description: "Laravel param: Pusher service cred - application key"
-    Type: String
-    Default: ""
-  PusherAppSecret:
-    Description: "Laravel param: Pusher service cred - application secret"
-    Type: String
-    Default: ""
-  PusherAppCluster:
-    Description: "Laravel param: Pusher service cred - cluster"
-    Type: String
-    Default: ""
-  BroadcastDriver:
-    Description: "Laravel param: config/broadcasting.php"
-    Type: String
-    Default: "null"
-  CacheDriver:
-    Description: "Laravel param: config/cache.php"
-    Type: String
-    Default: "database"
-  QueueConnection:
-    Description: "Laravel param: config/queue.php"
-    Type: String
-    Default: "sync"
-  SessionDriver:
-    Description: "Laravel param: config/session.php"
-    Type: String
-    Default: "database"
-  SessionLifetime:
-    Description: "Laravel param: config/session.php"
-    Type: Number
-    Default: 120
 Mappings:
   EnvironmentMap:
     development:
@@ -239,13 +81,9 @@ Outputs:
     Description: "DNS name of the service. Use this directly or as a CNAME."
     Value: !If [ IsActive, !Ref DNSRecord, 'None' ]
 Conditions:
-  SmtpUseSsl: !Equals [ !Ref SmtpSecurity, "SSL" ]
-  SmtpUseStarttls: !Equals [ !Ref SmtpSecurity, "STARTTLS" ]
   UseCustomDomain: !Not [ !Equals [ !Ref CustomDomain, "" ] ]
   UseCustomSSLCertificateArn: !Not [ !Equals [ !Ref CustomSSLCertificateArn, "" ] ]
   UseSslPolicy: !Not [ !Equals [ !Ref SslPolicy, "" ] ]
-  HasSiteIpWhitelist: !Not [ !Equals [ !Ref SiteWhitelistIps, "" ] ]
-  DoesNotHaveSiteIpWhitelist: !Equals [ !Ref SiteWhitelistIps, "" ]
   IsActive: !Or
     - !Equals [ !Ref Active, "true" ]
     - !Equals [ !Ref Environment, "production" ]
@@ -255,8 +93,6 @@ Resources:
   ##
   WebTaskDefinition:
     Type: AWS::ECS::TaskDefinition
-    DependsOn:
-      - StorageUserAccessKey
     Properties:
       ContainerDefinitions:
         - Name: web
@@ -266,7 +102,7 @@ Resources:
           MemoryReservation: !Ref MemoryReservation
           Privileged: 'true'
           PortMappings:
-            - ContainerPort: 80
+            - ContainerPort: 8080
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -274,132 +110,12 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: web
           Environment:
-            - Name: AWS_ACCESS_KEY_ID
-              Value: !Ref StorageUserAccessKey
-            - Name: AWS_SECRET_ACCESS_KEY
-              Value: !GetAtt StorageUserAccessKey.SecretAccessKey
-            - Name: AWS_S3_BUCKET
-              Value: !Ref Storage
             - Name: AWS_DEFAULT_REGION
               Value: !Ref AWS::Region
-            - Name: SNS_TOPIC
-              Value: !Ref StorageTopic
-            - Name: DB_HOST
-              Value: !Ref DbHost
-            - Name: DB_NAME
-              Value: !Ref DbName
-            - Name: DB_USER
-              Value: !Ref DbUsername
-            - Name: DB_DATABASE
-              Value: !Ref DbName
-            - Name: DB_USERNAME
-              Value: !Ref DbUsername
-            - Name: DB_PASSWORD
-              Value: !Ref DbPassword
-            - Name: NEWRELIC_LICENSE
-              Value: !Ref NewrelicLicense
-            - Name: NEWRELIC_APPNAME
-              Value: !Ref NewrelicAppName
             - Name: LB_IP_RANGE
               Value: 10.0.0.0/16
-            - Name: LOGIN_WHITELIST_IPS
-              Value: !Ref LoginWhitelistIps
-            - Name: SITE_WHITELIST_IPS
-              Value: !Ref SiteWhitelistIps
-            - Name: S3_UPLOADS_BASE_URL
-              Value: !Join [ '', [ 'https://s3-', !Ref 'AWS::Region', '.amazonaws.com/', !Ref Storage, '/uploads' ] ]
             - Name: SERVER_NAME
               Value: !If [ UseCustomDomain, !Ref CustomDomain, !Join [ '', [ !Ref AppName, '.', !FindInMap [ EnvironmentMap, !Ref Environment, Hostname ] ] ] ]
-            - Name: SMTP_HOST
-              Value: !Ref SmtpHost
-            - Name: SMTP_PORT
-              Value: !Ref SmtpPort
-            - Name: SMTP_USER
-              Value: !Ref SmtpUsername
-            - Name: SMTP_PASS
-              Value: !Ref SmtpPassword
-            - Name: SMTP_USE_SSL
-              Value: !If [SmtpUseSsl, 'true', !Ref 'AWS::NoValue']
-            - Name: SMTP_USE_STARTTLS
-              Value: !If [SmtpUseStarttls, 'true', !Ref 'AWS::NoValue']
-            - Name: WP_HOME
-              Value: !Join [ '', [ 'https://', !If [ UseCustomDomain, !Ref CustomDomain, !Join [ '', [ !Ref AppName, '.', !FindInMap [ EnvironmentMap, !Ref Environment, Hostname ] ] ] ] ] ]
-            - Name: WP_SITEURL
-              Value: !Join [ '', [ 'https://', !If [ UseCustomDomain, !Ref CustomDomain, !Join [ '', [ !Ref AppName, '.', !FindInMap [ EnvironmentMap, !Ref Environment, Hostname ] ] ] ], '/wp' ] ]
-            - Name: WP_ENV
-              Value: !Ref Environment
-            - Name: AUTH_KEY
-              Value: !Ref WpAuthKey
-            - Name: SECURE_AUTH_KEY
-              Value: !Ref WpSecureAuthKey
-            - Name: LOGGED_IN_KEY
-              Value: !Ref WpLoggedInKey
-            - Name: NONCE_KEY
-              Value: !Ref WpNonceKey
-            - Name: AUTH_SALT
-              Value: !Ref WpAuthSalt
-            - Name: SECURE_AUTH_SALT
-              Value: !Ref WpSecureAuthSalt
-            - Name: LOGGED_IN_SALT
-              Value: !Ref WpLoggedInSalt
-            - Name: NONCE_SALT
-              Value: !Ref WpNonceSalt
-            - Name: MAINTENANCE_MODE
-              Value: !Ref MaintenanceMode
-            - Name: MAINTENANCE_WHITELIST_IPS
-              Value: !Ref MaintenanceWhitelistIps
-            - Name: WPMS_SA_EMAIL
-              Value: !Ref WpmsSaEmail
-            - Name: WPMS_SA_USERNAME
-              Value: !Ref WpmsSaUsername
-            - Name: WPMS_SA_PASSWORD
-              Value: !Ref WpmsSaPassword
-            - Name: PUSHER_APP_ID
-              Value: !Ref PusherAppId
-            - Name: PUSHER_APP_KEY
-              Value: !Ref PusherAppKey
-            - Name: PUSHER_APP_SECRET
-              Value: !Ref PusherAppSecret
-            - Name: PUSHER_APP_CLUSTER
-              Value: !Ref PusherAppCluster
-            - Name: MIX_PUSHER_APP_KEY
-              Value: !Ref PusherAppKey
-            - Name: MIX_PUSHER_APP_CLUSTER
-              Value: !Ref PusherAppCluster
-            - Name: APP_KEY
-              Value: !Ref AppKey
-            - Name: APP_DEBUG
-              Value: !Ref AppDebug
-            - Name: APP_ENV
-              Value: !Ref Environment
-            - Name: APP_URL
-              Value: !Join [ '', [ 'https://', !If [ UseCustomDomain, !Ref CustomDomain, !Join [ '', [ !Ref AppName, '.', !FindInMap [ EnvironmentMap, !Ref Environment, Hostname ] ] ] ] ] ]
-            - Name: BROADCAST_DRIVER
-              Value: !Ref BroadcastDriver
-            - Name: CACHE_DRIVER
-              Value: !Ref CacheDriver
-            - Name: QUEUE_CONNECTION
-              Value: !Ref QueueConnection
-            - Name: SESSION_DRIVER
-              Value: !Ref SessionDriver
-            - Name: SESSION_LIFETIME
-              Value: !Ref SessionLifetime
-            - Name: MAIL_HOST
-              Value: !Ref SmtpHost
-            - Name: MAIL_PORT
-              Value: !Ref SmtpPort
-            - Name: MAIL_USERNAME
-              Value: !Ref SmtpUsername
-            - Name: MAIL_PASSWORD
-              Value: !Ref SmtpPassword
-            - Name: MAIL_FROM_NAME
-              Value: !Ref AppName
-            - Name: SENTRY_DSN
-              Value: !Ref SentryDsn
-            - Name: SENTRY_TRACES_SAMPLE_RATE
-              Value: !Ref SentryTracesSampleRate
-            - Name: SENTRY_ENVIRONMENT
-              Value: !Ref Environment
       Family: !Ref AWS::StackName
   WebService:
     Condition: IsActive
@@ -413,7 +129,7 @@ Resources:
       DesiredCount: !Ref DesiredCount
       LoadBalancers:
         - ContainerName: web
-          ContainerPort: '80'
+          ContainerPort: '8080'
           TargetGroupArn: !Ref TargetGroup
       Role: ecsServiceRole
       TaskDefinition: !Ref WebTaskDefinition
@@ -426,88 +142,6 @@ Resources:
       LogGroupName: !Ref AWS::StackName
       RetentionInDays: 30
 
-  ##
-  # Uploads storage
-  ##
-  Storage:
-    Type: AWS::S3::Bucket
-    Properties:
-      VersioningConfiguration:
-        Status: Enabled
-      LifecycleConfiguration:
-        Rules:
-          - Id: "Delete old backup versions after 30 days"
-            NoncurrentVersionExpirationInDays: 30
-            Status: Enabled
-  StorageBucketPolicyWhitelisted:
-    Type: AWS::S3::BucketPolicy
-    Condition: HasSiteIpWhitelist
-    Properties:
-      Bucket: !Ref Storage
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Action: "s3:GetObject"
-            Effect: "Allow"
-            Resource: !Join [ '', [ 'arn:aws:s3:::', !Ref Storage, '/uploads/*' ] ]
-            Principal: "*"
-            Condition:
-              IpAddress:
-                aws:SourceIp: !Split [ "," , !Ref SiteWhitelistIps ]
-  StorageBucketPolicyPublic:
-    Type: AWS::S3::BucketPolicy
-    Condition: DoesNotHaveSiteIpWhitelist
-    Properties:
-      Bucket: !Ref Storage
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Action: "s3:GetObject"
-            Effect: "Allow"
-            Resource: !Join [ '', [ 'arn:aws:s3:::', !Ref Storage, '/uploads/*' ] ]
-            Principal: "*"
-  StorageTopic:
-    Type: AWS::SNS::Topic
-  StorageUser:
-    Type: AWS::IAM::User
-    Properties:
-      Groups:
-        - WordPress
-      Policies:
-        - PolicyName: yas3fs
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Action:
-                  - s3:AbortMultipartUpload
-                  - s3:DeleteObject
-                  - s3:DeleteObjectVersion
-                  - s3:GetObject
-                  - s3:GetObjectVersion
-                  - s3:ListMultipartUploadParts
-                  - s3:PutObject
-                  - s3:RestoreObject
-                  - s3:ListBucket
-                Effect: Allow
-                Resource:
-                  - !Join [ '', [ 'arn:aws:s3:::', !Ref Storage ] ]
-                  - !Join [ '', [ 'arn:aws:s3:::', !Ref Storage, '/*' ] ]
-              - Action:
-                  - sns:ConfirmSubscription
-                  - sns:GetTopicAttributes
-                  - sns:Publish
-                  - sns:Subscribe
-                  - sns:Unsubscribe
-                Effect: Allow
-                Resource: !Ref StorageTopic
-              - Action: sqs:*
-                Effect: Allow
-                Resource: !Join [ '', [ 'arn:aws:sqs:', !Ref 'AWS::Region', ':', !Ref 'AWS::AccountId', ':yas3fs-*' ] ]
-  StorageUserAccessKey:
-    Type: AWS::IAM::AccessKey
-    Properties:
-      Serial: !Ref RotateAccessKey
-      UserName: !Ref StorageUser
   ##
   # Load Balancer
   ##
@@ -528,9 +162,9 @@ Resources:
       - LoadBalancer
     Properties:
       Protocol: HTTP
-      Port: '80'
+      Port: '8080'
       VpcId: !FindInMap [ EnvironmentMap, !Ref Environment, TargetGroupVPC ]
-      HealthCheckPath: "/wp/readme.html"
+      HealthCheckPath: "/index.html"
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 20
