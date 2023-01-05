@@ -53,7 +53,7 @@ Mappings:
       HostedZone: dev.wp.dsd.io.
       Hostname: dev.wp.dsd.io
       ECSCluster: wp-dev
-      SSLCertificateArn:  arn:aws:acm:eu-west-2:613903586696:certificate/006ac123-c8b7-4f47-ac49-2dcbc6c6bd45
+      SSLCertificateArn:  arn:aws:acm:eu-west-2:613903586696:certificate/e477b037-7cd7-4af3-be67-54d0ddd385a6
       ELBSubnet1: subnet-0378637b
       ELBSubnet2: subnet-c1fbc78b
       ELBSecurityGroup: sg-d86b93b1
@@ -62,7 +62,7 @@ Mappings:
       HostedZone: staging.wp.dsd.io.
       Hostname: staging.wp.dsd.io
       ECSCluster: wp-staging
-      SSLCertificateArn:  arn:aws:acm:eu-west-2:613903586696:certificate/9b35290e-dd85-4a10-b084-956c187ca6cd
+      SSLCertificateArn:  arn:aws:acm:eu-west-2:613903586696:certificate/95f47be5-9ba5-4af8-9a2e-fd2933bf71a0
       ELBSubnet1: subnet-5d7f6425
       ELBSubnet2: subnet-7ff4c835
       ELBSecurityGroup: sg-986b93f1
@@ -164,7 +164,7 @@ Resources:
       Protocol: HTTP
       Port: '8080'
       VpcId: !FindInMap [ EnvironmentMap, !Ref Environment, TargetGroupVPC ]
-      HealthCheckPath: "/index.html"
+      HealthCheckPath: "/health"
       TargetGroupAttributes:
         - Key: deregistration_delay.timeout_seconds
           Value: 20
