@@ -260,7 +260,7 @@ Resources:
     Properties:
       ContainerDefinitions:
         - Name: xray-agent
-          Essential: true
+          Essential: 'false'
           Image: amazon/aws-xray-daemon
           Cpu: 32
           Command:
